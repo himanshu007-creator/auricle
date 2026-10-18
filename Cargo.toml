@@ -17,7 +17,7 @@ license = "MIT"
 repository = "https://github.com/himanshu007-creator/auricle"
 homepage = "https://himanshu007-creator.github.io/auricle/"
 authors = ["Himanshu"]
-keywords = ["vad", "voice-activity-detection", "speech", "wasm", "audio"]
+keywords = ["vad", "voice-activity", "speech", "wasm", "audio"]
 categories = ["multimedia::audio", "wasm"]
 
 [profile.release]
