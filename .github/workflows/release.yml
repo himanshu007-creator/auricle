@@ -40,6 +40,7 @@ jobs:
       # attaches the release assets.
       - name: Publish auricle
         run: |
+          set -o pipefail
           v=$(node -p "require('./web/package.json').version")
           if npm view "auricle@$v" version >/dev/null 2>&1; then echo "auricle@$v already published"; exit 0; fi
           if npm publish -w web --provenance --access public 2>&1 | tee publish.log; then exit 0; fi
@@ -49,6 +50,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish auricle-react
         run: |
+          set -o pipefail
           v=$(node -p "require('./react/package.json').version")
           if npm view "auricle-react@$v" version >/dev/null 2>&1; then echo "auricle-react@$v already published"; exit 0; fi
           if npm publish -w react --provenance --access public 2>&1 | tee publish.log; then exit 0; fi
