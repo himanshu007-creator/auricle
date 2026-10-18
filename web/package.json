@@ -1,6 +1,6 @@
 {
   "name": "auricle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The listener for voice agents: Rust/WASM voice activity detection, turn taking, barge-in and ducking in the browser, with any OpenAI-compatible API. Drop-in for @ricky0123/vad-web.",
   "license": "MIT",
   "type": "module",

@@ -10,6 +10,7 @@ import { encodeWav } from './wav.ts';
 import BrainWorker from './worker/brain.worker.ts?worker&inline';
 import { base64ToBytes } from './wasm.ts';
 import { SessionTracker, type SessionStats } from './stats.ts';
+import { defined } from './options.ts';
 
 /** The brain WASM (Auricle v1 weights inside), loaded on demand so `import 'auricle'` stays light. */
 async function brainWasm(): Promise<Uint8Array<ArrayBuffer>> {
@@ -166,7 +167,7 @@ export class Auricle extends Emitter<AuricleEvents> {
       eagerFirstChunk: true,
       systemPrompt:
         'You are a voice assistant. Keep answers short and conversational. The user speaks; transcripts may contain self-corrections, where later words replace earlier ones.',
-      ...options,
+      ...defined(options),
     };
     if (this.options.mode === 'conversation' && !this.options.backend) throw new Error('conversation mode needs a backend');
     this.messages = [{ role: 'system', content: this.options.systemPrompt }];
@@ -318,7 +319,12 @@ export class Auricle extends Emitter<AuricleEvents> {
       case 'speech_confirmed':
         this.metrics.candidateToConfirmMs = this.candidateAtMs === null ? undefined : tMs - this.candidateAtMs;
         this.emit('speechStart', { tMs });
-        if (this.options.mode === 'conversation' && this.state !== 'agent_speaking') this.setState('user_speaking');
+        if (this.state !== 'agent_speaking') this.setState('user_speaking');
+        break;
+      case 'speech_end':
+      case 'misfire':
+        // In conversation mode the segment handler owns the state; in VAD mode nothing else will return it to listening.
+        if (this.options.mode === 'vad' && this.state === 'user_speaking') this.setState('listening');
         break;
       case 'interrupt':
         this.onInterrupt();

@@ -14,6 +14,7 @@
 // ignored above that), onFrameProcessed receives no raw frame (the audio stays
 // in the worklet), and there are no asset paths because there are no assets.
 import { Auricle } from './auricle.ts';
+import { defined } from './options.ts';
 
 /** The `@ricky0123/vad-web` option names, so a `MicVAD.new({...})` call moves over unchanged. */
 export interface RealTimeVADOptions {
@@ -69,7 +70,7 @@ export class MicVAD {
   async start(): Promise<void> {
     if (this.listening) return;
     await this.auricle.start();
-    const o = { ...DEFAULTS, ...this.options };
+    const o = { ...DEFAULTS, ...defined(this.options) };
     this.auricle.setThresholds(0, o.positiveSpeechThreshold, o.negativeSpeechThreshold, o.redemptionMs, o.minSpeechMs);
     this.listening = true;
   }

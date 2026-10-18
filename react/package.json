@@ -1,6 +1,6 @@
 {
   "name": "auricle-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React hooks for auricle: voice activity detection and interruptible voice conversations in the browser. Drop-in for @ricky0123/vad-react.",
   "keywords": [
     "react",
@@ -39,7 +39,7 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "auricle": "*",
+    "auricle": ">=0.1.1",
     "react": ">=18"
   },
   "devDependencies": {

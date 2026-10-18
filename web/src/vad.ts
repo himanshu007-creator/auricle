@@ -4,6 +4,7 @@ import { Auricle, type AuricleOptions } from './auricle.ts';
 import type { Profile } from './protocol.ts';
 import type { SessionStats } from './stats.ts';
 import { encodeWav } from './wav.ts';
+import { defined } from './options.ts';
 
 /** A finished stretch of the user's speech. */
 export interface Segment {
@@ -82,6 +83,11 @@ export interface Vad {
 
 const DEFAULTS: Required<Thresholds> = { positive: 0.5, negative: 0.35, hangoverMs: 240, minSpeechMs: 100 };
 
+/** Fills a partial threshold object from `base`, ignoring fields that are explicitly `undefined` (a plain spread would let them erase the defaults). */
+export function mergeThresholds(base: Required<Thresholds>, t?: Thresholds): Required<Thresholds> {
+  return { ...base, ...defined(t) };
+}
+
 /**
  * Creates the detector. Downloads nothing: the model is inside the package.
  *
@@ -91,12 +97,12 @@ const DEFAULTS: Required<Thresholds> = { positive: 0.5, negative: 0.35, hangover
  * ```
  */
 export async function createVad(options: VadOptions = {}): Promise<Vad> {
-  const auricleOptions: AuricleOptions = { mode: 'vad', profile: options.profile };
+  const auricleOptions: AuricleOptions = { mode: 'vad', ...defined({ profile: options.profile }) };
   const a = await Auricle.create(auricleOptions);
   let probability = 0;
   let speaking = false;
   let paused = false;
-  let thresholds: Required<Thresholds> = { ...DEFAULTS, ...options.thresholds };
+  let thresholds: Required<Thresholds> = mergeThresholds(DEFAULTS, options.thresholds);
   const apply = () => a.setThresholds(0, thresholds.positive, thresholds.negative, thresholds.hangoverMs, thresholds.minSpeechMs);
 
   a.on('frame', ({ p, tMs }) => {
@@ -148,7 +154,7 @@ export async function createVad(options: VadOptions = {}): Promise<Vad> {
     },
     destroy: stop,
     setThresholds(t) {
-      thresholds = { ...thresholds, ...t };
+      thresholds = mergeThresholds(thresholds, t);
       if (!paused) apply();
     },
     get listening() {

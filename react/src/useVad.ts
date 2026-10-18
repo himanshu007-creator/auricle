@@ -169,7 +169,7 @@ export function useMicVAD(options: UseMicVADOptions = {}) {
     onSpeechEnd: (audio) => options.onSpeechEnd?.(audio),
     onMisfire: () => options.onVADMisfire?.(),
     onFrame: (p) => options.onFrameProcessed?.({ isSpeech: p, notSpeech: 1 - p }),
-    thresholds: { positive: options.positiveSpeechThreshold, negative: options.negativeSpeechThreshold, hangoverMs: options.redemptionMs, minSpeechMs: options.minSpeechMs },
+    thresholds: Object.fromEntries(Object.entries({ positive: options.positiveSpeechThreshold, negative: options.negativeSpeechThreshold, hangoverMs: options.redemptionMs, minSpeechMs: options.minSpeechMs }).filter(([, v]) => v !== undefined)),
   });
   return { listening: v.listening, errored: v.error ? { message: v.error.message } : false, loading: v.loading, userSpeaking: v.speaking, pause: v.stop, start: v.start, toggle: v.toggle };
 }

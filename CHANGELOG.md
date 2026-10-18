@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Fix: option fields passed as `undefined` erased the defaults in `Auricle.create`, `createVad`, `auricle/compat` and `useMicVAD`. In practice `useMicVAD` never confirmed speech, and `createVad` and `useVad` dropped the `'speakers'` profile. Every option merge now ignores undefined fields. `auricle-react` 0.1.1 requires `auricle` >= 0.1.1.
+- VAD mode now reports `user_speaking` between speech confirmation and the end of the segment, so `useAuricle` and the `state` event work without a backend.
+
 ## 0.1.0 (unreleased)
 
 First release candidate.
