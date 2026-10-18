@@ -58,7 +58,7 @@ model-index:
         metrics:
           - type: f1
             value: 0.927
-            name: Frame F1 at threshold 0.5
+            name: "Frame F1 at threshold 0.5"
       - task:
           type: voice-activity-detection
           name: Foreground speech with a competing talker
@@ -68,10 +68,10 @@ model-index:
         metrics:
           - type: f1
             value: 0.942
-            name: Foreground F1 at threshold 0.5
+            name: "Foreground F1 at threshold 0.5"
           - type: false_alarm_rate
             value: 0.351
-            name: Background talker frames called speech (Silero VAD v6: 0.813)
+            name: "Background talker frames called speech (Silero VAD v6 0.813)"
 ---
 
 """
