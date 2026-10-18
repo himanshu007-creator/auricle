@@ -41,13 +41,19 @@ jobs:
       - name: Publish auricle
         run: |
           v=$(node -p "require('./web/package.json').version")
-          if npm view "auricle@$v" version >/dev/null 2>&1; then echo "auricle@$v already published"; else npm publish -w web --provenance --access public; fi
+          if npm view "auricle@$v" version >/dev/null 2>&1; then echo "auricle@$v already published"; exit 0; fi
+          if npm publish -w web --provenance --access public 2>&1 | tee publish.log; then exit 0; fi
+          # npm holds a fresh version as "staged" for a while and answers 409 to a second publish of it.
+          grep -qE "previously (staged|published) version" publish.log && echo "auricle@$v is already on the registry (staged)" || exit 1
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish auricle-react
         run: |
           v=$(node -p "require('./react/package.json').version")
-          if npm view "auricle-react@$v" version >/dev/null 2>&1; then echo "auricle-react@$v already published"; else npm publish -w react --provenance --access public; fi
+          if npm view "auricle-react@$v" version >/dev/null 2>&1; then echo "auricle-react@$v already published"; exit 0; fi
+          if npm publish -w react --provenance --access public 2>&1 | tee publish.log; then exit 0; fi
+          # npm holds a fresh version as "staged" for a while and answers 409 to a second publish of it.
+          grep -qE "previously (staged|published) version" publish.log && echo "auricle-react@$v is already on the registry (staged)" || exit 1
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Attach library files to the release
