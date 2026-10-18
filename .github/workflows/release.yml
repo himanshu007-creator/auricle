@@ -35,10 +35,19 @@ jobs:
       - run: npm ci
       - run: npm test -w web && npm run build -w web
       - run: npm test -w react && npm run build -w react
-      - run: npm publish -w web --provenance --access public
+      # Publish each package unless this version is already on the registry
+      # (a staged or earlier manual publish), so a re-run of the tag only
+      # attaches the release assets.
+      - name: Publish auricle
+        run: |
+          v=$(node -p "require('./web/package.json').version")
+          if npm view "auricle@$v" version >/dev/null 2>&1; then echo "auricle@$v already published"; else npm publish -w web --provenance --access public; fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: npm publish -w react --provenance --access public
+      - name: Publish auricle-react
+        run: |
+          v=$(node -p "require('./react/package.json').version")
+          if npm view "auricle-react@$v" version >/dev/null 2>&1; then echo "auricle-react@$v already published"; else npm publish -w react --provenance --access public; fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Attach library files to the release
