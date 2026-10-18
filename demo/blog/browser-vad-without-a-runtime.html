@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>A browser VAD without an inference runtime</title>
+  <meta name="description" content="How Auricle runs Silero VAD v6 in the browser at 0.05 ms per frame and 925 KB by writing the forward pass in Rust instead of shipping onnxruntime-web. Measured against @ricky0123/vad-web with reproducible scripts." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://himanshu007-creator.github.io/auricle/blog/browser-vad-without-a-runtime.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Auricle" />
+  <meta property="og:title" content="A browser VAD without an inference runtime" />
+  <meta property="og:description" content="Same Silero weights, 3.5x faster per frame, 6x smaller, 12x faster start-up. Here is what doing less looks like." />
+  <meta property="og:url" content="https://himanshu007-creator.github.io/auricle/blog/browser-vad-without-a-runtime.html" />
+  <meta property="og:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta property="og:image:alt" content="Auricle: the listener that knows who is talking" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="https://himanshu007-creator.github.io/auricle/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <script src="../theme.js"></script>
+  <link rel="stylesheet" href="../src/style.css" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"A browser VAD without an inference runtime","datePublished":"2026-10-18","author":{"@type":"Person","name":"Himanshu"},"publisher":{"@type":"Organization","name":"Auricle"},"url":"https://himanshu007-creator.github.io/auricle/blog/browser-vad-without-a-runtime.html"}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Auricle", "item": "https://himanshu007-creator.github.io/auricle/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://himanshu007-creator.github.io/auricle/blog/"}, {"@type": "ListItem", "position": 3, "name": "A browser VAD without an inference runtime", "item": "https://himanshu007-creator.github.io/auricle/blog/browser-vad-without-a-runtime.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","@id":"https://himanshu007-creator.github.io/auricle/#org","name":"Auricle","url":"https://himanshu007-creator.github.io/auricle/","logo":"https://himanshu007-creator.github.io/auricle/brand/tile-green-wave.svg","sameAs":["https://github.com/himanshu007-creator/auricle","https://www.npmjs.com/package/auricle","https://huggingface.co/auricle-voice/auricle-v1"]}</script>
+</head>
+<body class="article">
+  <nav class="top"><a class="brand" href="../"><img class="dark" src="../brand/logo.svg" alt="Auricle" /><img class="light" src="../brand/logo-light.svg" alt="Auricle" /></a><a href="../">Demo</a><a href="../docs.html">Docs</a><a href="../philosophy.html">Why</a><a href="../benchmarks.html">Benchmarks</a><a href="../model.html">Model</a><a href="../roadmap.html">Roadmap</a><a href="./" class="active">Blog</a><a href="https://github.com/himanshu007-creator/auricle">GitHub</a><span class="spacer"></span><button class="theme-toggle" type="button" aria-label="Switch theme">☀</button></nav>
+  <main class="prose">
+    <h1>A browser VAD without an inference runtime</h1>
+    <p class="lede">The standard way to run a voice activity detector in a web page is to ship a general-purpose inference runtime and a model file, then ask the runtime to execute the model. It works. It also costs 5.5 MB, 200 ms of start-up and a main-thread callback per frame. We wanted to know what the same model costs when you write its six operations down by hand.</p>
+
+    <h2 id="the-model-is-small-the-runtime-is-not">The model is small; the runtime is not</h2>
+    <p>Silero VAD v6 is a windowed FFT, four small convolutions, one LSTM cell and a sigmoid. The weights are 974 KB as float32. The runtime that the popular browser package uses to execute them is 3.6 MB of WebAssembly on its own, and the ONNX file carries a 264 KB matrix that is nothing more than a Hann-windowed DFT basis, because the exporter did not know it could compute one.</p>
+    <p>So we wrote the forward pass in Rust. Reflect pad, 256-point radix-2 FFT at hop 128, the four conv blocks with their strides, the LSTM gates in PyTorch order, the 1x1 conv, the sigmoid. Then we compared the output to onnxruntime-web on the same clip: maximum difference 7.8e-7. Same model, same answer.</p>
+
+    <h2 id="what-it-bought">What it bought</h2>
+    <table>
+      <tr><th></th><th>Auricle</th><th>onnxruntime-web, as vad-web runs it</th></tr>
+      <tr><td>Per 32 ms frame, p50, Chromium</td><td>0.052 ms</td><td>0.182 ms</td></tr>
+      <tr><td>Per frame, WebKit</td><td>0.050 ms</td><td>0.184 ms</td></tr>
+      <tr><td>Start-up to a ready model</td><td>13 to 28 ms</td><td>175 to 215 ms</td></tr>
+      <tr><td>Download, gzipped</td><td>925 KB</td><td>5,520 KB</td></tr>
+      <tr><td>Files to copy into your app</td><td>none</td><td>model, runtime, worklet</td></tr>
+    </table>
+    <p>Three things did most of the work. Replacing the basis matmul with an FFT removed 264k of the roughly 720k multiply-adds per frame. Laying activations out time-major so every inner loop is one contiguous dot product, then writing that dot product with explicit SIMD lanes, took the frame from 0.19 ms to 0.05 ms. And putting the scratch buffers in the struct means the audio path never allocates.</p>
+    <p>The speed does not change detection latency, which is set by the frame size and the confirmation policy. It changes what is possible around the detector: the decision runs in a worker, the duck command goes straight to the playback worklet over a MessagePort, and a phone has headroom left for the rest of the page.</p>
+
+    <h2 id="what-it-did-not-buy">What it did not buy</h2>
+    <p>Accuracy. It is the same model, so it is exactly as accurate as before: 93.7% frame F1 on TEN VAD's human-labelled recordings, where TEN VAD itself scores 93.1% at the same threshold. We tried the usual post-processing tricks, smoothing and hysteresis and a 16 ms hop, and every one of them lowered the score. That is in the benchmarks page too, because negative results are the ones people repeat.</p>
+    <p>Reproduce it: <code>./scripts/build-wasm.sh &amp;&amp; cd bench &amp;&amp; npm install &amp;&amp; npm run bench</code>. The numbers above are from <a href="../benchmarks.html">the benchmarks page</a>, with the browser matrix and the TEN set alongside.</p>
+  </main>
+</body>
+</html>

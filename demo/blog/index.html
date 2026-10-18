@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Auricle blog: notes on browser voice activity detection and voice agents</title>
+  <meta name="description" content="Short technical posts from the Auricle project: browser voice activity detection without an inference runtime, detecting the user rather than the room, and what silence costs a voice agent." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://himanshu007-creator.github.io/auricle/blog/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Auricle" />
+  <meta property="og:title" content="Auricle blog: notes on browser voice activity detection and voice agents" />
+  <meta property="og:description" content="Short technical posts from the Auricle project: browser voice activity detection without an inference runtime, detecting the user rather than the room, and what silence costs a voice agent." />
+  <meta property="og:url" content="https://himanshu007-creator.github.io/auricle/blog/" />
+  <meta property="og:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta property="og:image:alt" content="Auricle: the listener that knows who is talking" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="https://himanshu007-creator.github.io/auricle/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <script src="../theme.js"></script>
+  <link rel="stylesheet" href="../src/style.css" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Auricle", "item": "https://himanshu007-creator.github.io/auricle/"}, {"@type": "ListItem", "position": 2, "name": "Notes on listening", "item": "https://himanshu007-creator.github.io/auricle/blog/"}]}, {"@type": "Blog", "name": "Auricle blog", "url": "https://himanshu007-creator.github.io/auricle/blog/", "publisher": {"@type": "Organization", "name": "Auricle"}, "blogPost": [{"@type": "BlogPosting", "headline": "A browser VAD without an inference runtime", "url": "https://himanshu007-creator.github.io/auricle/blog/browser-vad-without-a-runtime.html"}, {"@type": "BlogPosting", "headline": "The other person in the room", "url": "https://himanshu007-creator.github.io/auricle/blog/the-other-person-in-the-room.html"}, {"@type": "BlogPosting", "headline": "What silence costs a voice agent", "url": "https://himanshu007-creator.github.io/auricle/blog/what-silence-costs.html"}]}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","@id":"https://himanshu007-creator.github.io/auricle/#org","name":"Auricle","url":"https://himanshu007-creator.github.io/auricle/","logo":"https://himanshu007-creator.github.io/auricle/brand/tile-green-wave.svg","sameAs":["https://github.com/himanshu007-creator/auricle","https://www.npmjs.com/package/auricle","https://huggingface.co/auricle-voice/auricle-v1"]}</script>
+</head>
+<body class="article">
+  <nav class="top"><a class="brand" href="../"><img class="dark" src="../brand/logo.svg" alt="Auricle" /><img class="light" src="../brand/logo-light.svg" alt="Auricle" /></a><a href="../">Demo</a><a href="../docs.html">Docs</a><a href="../philosophy.html">Why</a><a href="../benchmarks.html">Benchmarks</a><a href="../model.html">Model</a><a href="../roadmap.html">Roadmap</a><a href="./" class="active">Blog</a><a href="https://github.com/himanshu007-creator/auricle">GitHub</a><span class="spacer"></span><button class="theme-toggle" type="button" aria-label="Switch theme">☀</button></nav>
+  <main class="prose">
+    <h1>Notes on listening</h1>
+    <p class="lede">Short posts about the part of a voice agent nobody benchmarks: the ears. Every number links to the script that produced it.</p>
+    <h2 id="a-browser-vad-without-an-inference-runtime"><a href="./browser-vad-without-a-runtime.html">A browser VAD without an inference runtime</a></h2>
+    <p>Why we wrote the Silero forward pass by hand in Rust, what it cost, and what it bought: 0.05 ms per frame, 925 KB, 28 ms to a ready model.</p>
+    <h2 id="the-other-person-in-the-room"><a href="./the-other-person-in-the-room.html">The other person in the room</a></h2>
+    <p>Every detector counts the television as the user. What it took to train one that does not, which ideas failed, and the number we can honestly claim.</p>
+    <h2 id="what-silence-costs-a-voice-agent"><a href="./what-silence-costs.html">What silence costs a voice agent</a></h2>
+    <p>Audio APIs bill by the minute and TTS by the character. A listener on the device changes what reaches the bill.</p>
+  </main>
+</body>
+</html>

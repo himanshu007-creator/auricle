@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The other person in the room</title>
+  <meta name="description" content="Why every voice activity detector treats a second talker as the user, how we trained Auricle v1 to fire 2.3x less on background speech than Silero VAD v6, which ideas failed, and what we can honestly claim." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://himanshu007-creator.github.io/auricle/blog/the-other-person-in-the-room.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Auricle" />
+  <meta property="og:title" content="The other person in the room" />
+  <meta property="og:description" content="A detector that counts the television as the user is not a detector of the user. Training one that knows the difference." />
+  <meta property="og:url" content="https://himanshu007-creator.github.io/auricle/blog/the-other-person-in-the-room.html" />
+  <meta property="og:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta property="og:image:alt" content="Auricle: the listener that knows who is talking" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="https://himanshu007-creator.github.io/auricle/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <script src="../theme.js"></script>
+  <link rel="stylesheet" href="../src/style.css" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"The other person in the room","datePublished":"2026-10-18","author":{"@type":"Person","name":"Himanshu"},"publisher":{"@type":"Organization","name":"Auricle"},"url":"https://himanshu007-creator.github.io/auricle/blog/the-other-person-in-the-room.html"}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Auricle", "item": "https://himanshu007-creator.github.io/auricle/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://himanshu007-creator.github.io/auricle/blog/"}, {"@type": "ListItem", "position": 3, "name": "The other person in the room", "item": "https://himanshu007-creator.github.io/auricle/blog/the-other-person-in-the-room.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","@id":"https://himanshu007-creator.github.io/auricle/#org","name":"Auricle","url":"https://himanshu007-creator.github.io/auricle/","logo":"https://himanshu007-creator.github.io/auricle/brand/tile-green-wave.svg","sameAs":["https://github.com/himanshu007-creator/auricle","https://www.npmjs.com/package/auricle","https://huggingface.co/auricle-voice/auricle-v1"]}</script>
+</head>
+<body class="article">
+  <nav class="top"><a class="brand" href="../"><img class="dark" src="../brand/logo.svg" alt="Auricle" /><img class="light" src="../brand/logo-light.svg" alt="Auricle" /></a><a href="../">Demo</a><a href="../docs.html">Docs</a><a href="../philosophy.html">Why</a><a href="../benchmarks.html">Benchmarks</a><a href="../model.html">Model</a><a href="../roadmap.html">Roadmap</a><a href="./" class="active">Blog</a><a href="https://github.com/himanshu007-creator/auricle">GitHub</a><span class="spacer"></span><button class="theme-toggle" type="button" aria-label="Switch theme">☀</button></nav>
+  <main class="prose">
+    <h1>The other person in the room</h1>
+    <p class="lede">A voice activity detector answers one question: is there speech in this frame? For a voice agent that is the wrong question. The agent needs to know whether <em>the user</em> is speaking, and in a kitchen with a television, an office with a colleague, or a car with a passenger, those are different questions with different answers.</p>
+
+    <h2 id="how-bad-is-it">How bad is it</h2>
+    <p>We built a test: 500 five-second clips, a foreground speaker at 0 dB and a second speaker 3 to 15 dB quieter, both through a room impulse response, from held-out LibriSpeech speakers. Then we scored Silero VAD v6, the model inside nearly every browser VAD, on the frames where only the background talker is speaking. It called 82% of them speech. That is not a flaw in Silero. It was trained to find speech, and it found speech.</p>
+
+    <h2 id="training-for-the-other-question">Training for the other question</h2>
+    <p>The recipe is mostly data. Take clean speech, label it with Silero so the labels are good, then corrupt the audio the model actually hears: rooms, noise, music, laughs and coughs at the user's level, and a competing talker in 45% of clips. Keep the clean labels. Now the only way to score well is to learn what distinguishes the foreground voice from the background one. An 83,000-parameter network on log-mel features, two causal convolutions and a two-layer GRU, trained for 20,000 steps on a laptop CPU overnight.</p>
+    <table>
+      <tr><th></th><th>Auricle v1</th><th>Silero v6</th></tr>
+      <tr><td>Foreground F1 with a competing talker</td><td>94.2%</td><td>89.4%</td></tr>
+      <tr><td>Background-only frames called speech</td><td>35%</td><td>82%</td></tr>
+      <tr><td>Human-labelled real audio (TEN set), F1</td><td>92.7%</td><td>93.6%</td></tr>
+    </table>
+
+    <h2 id="what-did-not-work-so-you-do-not-try-it">What did not work, so you do not try it</h2>
+    <p>We hoped the 35% was a training-pressure problem. A second run made the mixing harder and weighted background-only frames 4x in the loss. At matched recall the false-alarm rate was identical to the decimal; the model had learned to be timid, not selective, and lost 1.3 points on real speech. A third run added ten hours each of six languages and changed every number by under 0.3 points. Both are in the research notes.</p>
+    <p>The reason is simple once you see it. With only the mixed audio as input, the model has one cue for "foreground": louder and closer. At 0 to 20 dB of separation that cue is ambiguous, and no amount of pressure makes an ambiguous cue decisive. The information is not in the input. The next version adds it: a two-second enrolment that gives the detector the user's voice as a second input, which is the one cue that resolves the ambiguity.</p>
+
+    <h2 id="the-honest-claim">The honest claim</h2>
+    <p>Auricle v1 hears the user more accurately than Silero when someone else is talking, and fires less than half as often on the other person, at equal accuracy on ordinary single-speaker recordings. Tested on seven languages. It does not ignore the television; it ignores it 2.3x more often. The clips are ours until a public meeting-corpus benchmark lands, and the <a href="../model.html">model card</a> says so. That is the number, and it is a real one.</p>
+  </main>
+</body>
+</html>

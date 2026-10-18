@@ -1,0 +1,107 @@
+{
+ "speech_test": {
+  "clean_agreement_f1": 0.9861913737259136,
+  "competing": {
+   "student": {
+    "foreground_f1": 0.9462664423850469,
+    "foreground_recall": 0.9786907566294223,
+    "background_false_alarm_rate": 0.3525330899132816
+   },
+   "teacher": {
+    "foreground_f1": 0.8969718581914357,
+    "foreground_recall": 0.9784962503511919,
+    "background_false_alarm_rate": 0.8208124144226381
+   }
+  }
+ },
+ "lang_ar_eg": {
+  "clean_agreement_f1": 0.9808496259038415,
+  "competing": {
+   "student": {
+    "foreground_f1": 0.9638894211507307,
+    "foreground_recall": 0.9830339853257297,
+    "background_false_alarm_rate": 0.5894508954930132
+   },
+   "teacher": {
+    "foreground_f1": 0.9445342230099566,
+    "foreground_recall": 0.9656771305228375,
+    "background_false_alarm_rate": 0.8333005313914583
+   }
+  }
+ },
+ "lang_cmn_hans_cn": {
+  "clean_agreement_f1": 0.9498529859069249,
+  "competing": {
+   "student": {
+    "foreground_f1": 0.8950601081421596,
+    "foreground_recall": 0.974664441039947,
+    "background_false_alarm_rate": 0.5853579527048914
+   },
+   "teacher": {
+    "foreground_f1": 0.8611228963371518,
+    "foreground_recall": 0.9746187089840623,
+    "background_false_alarm_rate": 0.843699384515711
+   }
+  }
+ },
+ "lang_de_de": {
+  "clean_agreement_f1": 0.9836799386387265,
+  "competing": {
+   "student": {
+    "foreground_f1": 0.9449029956281022,
+    "foreground_recall": 0.9873478848754105,
+    "background_false_alarm_rate": 0.6083453583453583
+   },
+   "teacher": {
+    "foreground_f1": 0.922919987248964,
+    "foreground_recall": 0.9786749082480201,
+    "background_false_alarm_rate": 0.8285233285233286
+   }
+  }
+ },
+ "lang_es_419": {
+  "clean_agreement_f1": 0.986208254132295,
+  "competing": {
+   "student": {
+    "foreground_f1": 0.9587499087790996,
+    "foreground_recall": 0.9872625824268726,
+    "background_false_alarm_rate": 0.5201113430758525
+   },
+   "teacher": {
+    "foreground_f1": 0.9327770964074376,
+    "foreground_recall": 0.9787333972082887,
+    "background_false_alarm_rate": 0.8670842032011135
+   }
+  }
+ },
+ "lang_hi_in": {
+  "clean_agreement_f1": 0.9737547831493679,
+  "competing": {
+   "student": {
+    "foreground_f1": 0.9526666008135849,
+    "foreground_recall": 0.9809338881183541,
+    "background_false_alarm_rate": 0.5987893838274095
+   },
+   "teacher": {
+    "foreground_f1": 0.9341100485298315,
+    "foreground_recall": 0.9681923254738789,
+    "background_false_alarm_rate": 0.800558745925811
+   }
+  }
+ },
+ "lang_ja_jp": {
+  "clean_agreement_f1": 0.9330762267150459,
+  "competing": {
+   "student": {
+    "foreground_f1": 0.901405033862327,
+    "foreground_recall": 0.9792243158958142,
+    "background_false_alarm_rate": 0.6253666340769709
+   },
+   "teacher": {
+    "foreground_f1": 0.872462835187383,
+    "foreground_recall": 0.952497035182501,
+    "background_false_alarm_rate": 0.7649986667851747
+   }
+  }
+ }
+}

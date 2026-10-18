@@ -1,0 +1,21 @@
+{
+  "name": "auricle-bench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "node vad-web-vs-auricle.mjs",
+    "dataset": "python3 make_dataset.py data",
+    "accuracy": "node accuracy.mjs",
+    "browsers": "node browser-matrix.mjs",
+    "latency": "node latency.mjs",
+    "ten": "node ten-testset.mjs",
+    "smoothing": "node smoothing.mjs"
+  },
+  "dependencies": {
+    "@ricky0123/vad-web": "0.0.31",
+    "onnxruntime-web": "1.30.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.0"
+  }
+}

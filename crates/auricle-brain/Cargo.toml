@@ -1,0 +1,19 @@
+[package]
+name = "auricle-brain"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = ["auricle"]
+silero = ["auricle-vad/silero"]
+auricle = ["auricle-vad/auricle"]
+
+[dependencies]
+auricle-vad = { path = "../auricle-vad", default-features = false }
+auricle-turn = { path = "../auricle-turn" }
+auricle-text = { path = "../auricle-text" }
+wasm-bindgen = "=0.2.129"

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url><loc>https://himanshu007-creator.github.io/auricle/</loc><lastmod>2026-10-18</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://himanshu007-creator.github.io/auricle/docs.html</loc><lastmod>2026-10-18</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://himanshu007-creator.github.io/auricle/benchmarks.html</loc><lastmod>2026-10-18</lastmod><changefreq>weekly</changefreq><priority>0.9</priority><image:image><image:loc>https://himanshu007-creator.github.io/auricle/charts/pr-competing.png</image:loc></image:image><image:image><image:loc>https://himanshu007-creator.github.io/auricle/charts/pr-ten.png</image:loc></image:image><image:image><image:loc>https://himanshu007-creator.github.io/auricle/charts/languages.png</image:loc></image:image><image:image><image:loc>https://himanshu007-creator.github.io/auricle/charts/speed.png</image:loc></image:image><image:image><image:loc>https://himanshu007-creator.github.io/auricle/charts/startup.png</image:loc></image:image><image:image><image:loc>https://himanshu007-creator.github.io/auricle/charts/size.png</image:loc></image:image><image:image><image:loc>https://himanshu007-creator.github.io/auricle/charts/turn-end.png</image:loc></image:image></url>
+  <url><loc>https://himanshu007-creator.github.io/auricle/model.html</loc><lastmod>2026-10-18</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://himanshu007-creator.github.io/auricle/philosophy.html</loc><lastmod>2026-10-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://himanshu007-creator.github.io/auricle/roadmap.html</loc><lastmod>2026-10-18</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://himanshu007-creator.github.io/auricle/blog/</loc><lastmod>2026-10-18</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://himanshu007-creator.github.io/auricle/blog/browser-vad-without-a-runtime.html</loc><lastmod>2026-10-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://himanshu007-creator.github.io/auricle/blog/the-other-person-in-the-room.html</loc><lastmod>2026-10-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://himanshu007-creator.github.io/auricle/blog/what-silence-costs.html</loc><lastmod>2026-10-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+</urlset>

@@ -1,0 +1,15 @@
+{
+  "name": "auricle-monorepo",
+  "private": true,
+  "workspaces": [
+    "web",
+    "react",
+    "demo"
+  ],
+  "scripts": {
+    "build:wasm": "./scripts/build-wasm.sh",
+    "build": "npm run build:wasm && npm run build -w web && npm run build -w react && npm run build -w demo",
+    "dev": "npm run dev -w demo",
+    "test": "npm test -w web && npm test -w react"
+  }
+}

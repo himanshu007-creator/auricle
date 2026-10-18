@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://himanshu007-creator.github.io/auricle/sitemap.xml
+
+# For language models
+# https://himanshu007-creator.github.io/auricle/llms.txt
+# https://himanshu007-creator.github.io/auricle/llms-full.txt

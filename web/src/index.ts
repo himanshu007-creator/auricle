@@ -1,0 +1,16 @@
+export { Auricle, peakWindowDbfs } from './auricle.ts';
+export type { AuricleOptions, AuricleState, AuricleEvents, Turn, TurnMetrics, CleanupMode } from './auricle.ts';
+export { createVad } from './vad.ts';
+export type { Vad, VadOptions, Segment, Thresholds } from './vad.ts';
+export { formatStats } from './stats.ts';
+export type { SessionStats } from './stats.ts';
+export { OpenAICompat, normalizeBaseURL, explainFetchError, BackendError } from './backend/openai.ts';
+export type { OpenAICompatConfig, ChatMessage, AudioChunk, RoleCheck } from './backend/openai.ts';
+export { parseCurl } from './backend/curl.ts';
+export type { ParsedCurl } from './backend/curl.ts';
+export { encodeWav, parseWavHeader, pcmToFloat } from './wav.ts';
+export { heardText, takeSentences, subsequenceMask } from './heard.ts';
+export { needsLoopback } from './audio.ts';
+export type { LoopbackMode } from './audio.ts';
+export type { Profile, ThresholdSlot, TurnEventName } from './protocol.ts';
+export { EVENT_NAMES } from './protocol.ts';

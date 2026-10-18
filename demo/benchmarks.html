@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Auricle benchmarks: browser VAD speed, size and accuracy vs vad-web, Silero VAD v6 and TEN VAD</title>
+  <meta name="description" content="Measured numbers for browser voice activity detection: 0.05 ms per frame vs 0.18 ms for onnxruntime-web, 13 ms start-up vs 215 ms, 346 KB vs 5.5 MB download, 92.7% F1 on human-labelled audio, and 35% vs 81% background false alarms with a second talker. Every chart has a script that reproduces it." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://himanshu007-creator.github.io/auricle/benchmarks.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Auricle" />
+  <meta property="og:title" content="Auricle benchmarks: browser VAD speed, size and accuracy vs vad-web, Silero VAD v6 and TEN VAD" />
+  <meta property="og:description" content="Measured numbers for browser voice activity detection: 0.05 ms per frame vs 0.18 ms for onnxruntime-web, 13 ms start-up vs 215 ms, 346 KB vs 5.5 MB download, 92.7% F1 on human-labelled audio, and 35% vs 81% background false alarms with a second talker. Every chart has a script that reproduces it." />
+  <meta property="og:url" content="https://himanshu007-creator.github.io/auricle/benchmarks.html" />
+  <meta property="og:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta property="og:image:alt" content="Auricle: the listener that knows who is talking" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Auricle benchmarks: browser VAD speed, size and accuracy vs vad-web, Silero VAD v6 and TEN VAD" />
+  <meta name="twitter:description" content="Measured numbers for browser voice activity detection: 0.05 ms per frame vs 0.18 ms for onnxruntime-web, 13 ms start-up vs 215 ms, 346 KB vs 5.5 MB download, 92.7% F1 on human-labelled audio, and 35% vs 81% background false alarms with a second talker. Every chart has a script that reproduces it." />
+  <meta name="twitter:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="https://himanshu007-creator.github.io/auricle/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="./src/style.css" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Auricle", "item": "https://himanshu007-creator.github.io/auricle/"}, {"@type": "ListItem", "position": 2, "name": "Measured, not claimed", "item": "https://himanshu007-creator.github.io/auricle/benchmarks.html"}]}, {"@type": "Dataset", "name": "Auricle benchmark results", "description": "Measured per-frame cost, start-up time, download size, precision-recall curves and turn-end latency for Auricle, vad-web, Silero VAD v6 and TEN VAD.", "url": "https://himanshu007-creator.github.io/auricle/benchmarks.html", "license": "https://opensource.org/licenses/MIT", "creator": {"@type": "Organization", "name": "Auricle"}, "distribution": [{"@type": "DataDownload", "encodingFormat": "application/json", "contentUrl": "https://github.com/himanshu007-creator/auricle/blob/main/bench/pr-v1.json"}, {"@type": "DataDownload", "encodingFormat": "application/json", "contentUrl": "https://github.com/himanshu007-creator/auricle/blob/main/bench/langs-v1.json"}]}, {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Is Auricle more accurate than Silero VAD?", "acceptedAnswer": {"@type": "Answer", "text": "On one person talking, Auricle v1 is about one F1 point behind Silero v6 (92.7% vs 93.6% on TEN VAD's human-labelled test set) and far ahead when a second person is talking: it wrongly flags 35% of the background talker's speech where Silero v6 flags 81%."}}, {"@type": "Question", "name": "How much faster is Auricle than vad-web?", "acceptedAnswer": {"@type": "Answer", "text": "About 3.5x less CPU per 32 ms frame in Chromium and WebKit (0.05 ms vs 0.18 ms), 12x to 16x faster start-up (13 to 15 ms vs 175 to 215 ms), and a 6x to 16x smaller download (948 KB with Silero v6 or 346 KB with Auricle v1, vs 5,520 KB), because the model is hand-written Rust compiled to WebAssembly with no inference runtime."}}, {"@type": "Question", "name": "How fast does Auricle detect the end of a turn?", "acceptedAnswer": {"@type": "Answer", "text": "Median 324 ms after the user stops talking, against 1,432 ms with vad-web's default settings, on 240 labelled utterances with 100% recall and zero false alarms."}}, {"@type": "Question", "name": "Which languages does Auricle v1 work in?", "acceptedAnswer": {"@type": "Answer", "text": "Tested on English, Spanish, German, Arabic, Hindi, Mandarin and Japanese with the FLEURS corpus. In every language Auricle v1 flags 15 to 47 points less of a background talker's speech than Silero v6, with foreground recall within a point."}}, {"@type": "Question", "name": "How do I reproduce the benchmarks?", "acceptedAnswer": {"@type": "Answer", "text": "Every chart comes from a script in the bench/ directory of the repository or from vadtrain.prcurve in the training repository. The curve data is checked in as bench/pr-v1.json and bench/langs-v1.json."}}]}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","@id":"https://himanshu007-creator.github.io/auricle/#org","name":"Auricle","url":"https://himanshu007-creator.github.io/auricle/","logo":"https://himanshu007-creator.github.io/auricle/brand/tile-green-wave.svg","sameAs":["https://github.com/himanshu007-creator/auricle","https://www.npmjs.com/package/auricle","https://huggingface.co/auricle-voice/auricle-v1"]}</script>
+</head>
+<body class="article">
+  <nav class="top"><a class="brand" href="./"><img class="dark" src="brand/logo.svg" alt="Auricle" /><img class="light" src="brand/logo-light.svg" alt="Auricle" /></a><a href="./">Demo</a><a href="./docs.html">Docs</a><a href="./philosophy.html">Why</a><a href="./benchmarks.html">Benchmarks</a><a href="./model.html">Model</a><a href="./roadmap.html">Roadmap</a><a href="./blog/">Blog</a><a href="https://github.com/himanshu007-creator/auricle">GitHub</a><span class="spacer"></span><button class="theme-toggle" type="button" aria-label="Switch theme">☀</button></nav>
+  <main class="prose wide">
+    <h1>Measured, not claimed</h1>
+    <p class="lede">Every chart on this page comes from a script in <code>bench/</code> or the training repository that you can run yourself. Measured on 2026-10-17 and 2026-10-18 on Apple Silicon against <code>@ricky0123/vad-web</code> 0.0.31 and onnxruntime-web 1.30. The full method, caveats and the things that did not work are in <a href="https://github.com/himanshu007-creator/auricle/blob/main/docs/COMPARISON.md">docs/COMPARISON.md</a>.</p>
+
+    <h2 id="the-short-version">The short version</h2>
+    <ul class="big">
+      <li><strong>5x less CPU, 20x faster start, 16x smaller, as shipped.</strong> Auricle v1 scores a frame in 0.035 to 0.038 ms in Chromium and WebKit against 0.18 ms for vad-web, is ready in 4 to 10 ms against 175 to 215, and downloads 350 KB against 5,520. With vad-web's own Silero weights loaded into Auricle's engine for a like-for-like test, the output matches to 7.8e-7 and the engine is still 3.5x cheaper: no inference runtime is the whole difference.</li>
+      <li><strong>The detector that ships ignores the other person in the room.</strong> Auricle v1, our own 83k-parameter model and the only one in the npm package, wrongly flags 35% of a background talker's speech where Silero v6 flags 81%. On one person talking it is about a point behind Silero. The whole engine is 350 KB gzipped.</li>
+      <li><strong>The agent knows you stopped 1.1 seconds sooner</strong> than vad-web's default settings, with the same recall and no false alarms.</li>
+    </ul>
+
+    <h2 id="two-people-talking">Two people talking</h2>
+    <p>This is the case voice agents actually meet: a TV, a colleague, a family member in the same room. The chart sweeps every threshold. For any share of the user's speech you want to keep, read off how much of the other person's speech gets through.</p>
+    <figure class="chart"><img src="charts/pr-competing.png" data-light="charts/light/pr-competing.png" alt="Background false-alarm rate against foreground recall for Auricle v1 and Silero v6 with a second talker in the room" loading="lazy" /><figcaption>At the default threshold both models keep about 98% of the user's speech. Silero v6 also passes 81% of the other person's frames; Auricle v1 passes 35%. At every point on the curve Auricle lets through three to four times less of the background talker. Clips are 5 s of a held-out LibriSpeech speaker with a second held-out speaker 3 to 15 dB quieter, both convolved with a real room impulse response. Regenerate with <code>python -m vadtrain.prcurve</code>.</figcaption></figure>
+
+    <h2 id="one-person-talking">One person talking</h2>
+    <p>On clean single-speaker audio with human labels, Silero v6 is still the slightly better detector, by about one F1 point. We say so. If your product needs Silero's exact numbers, the Rust crate builds with its weights behind the <code>silero</code> feature.</p>
+    <figure class="chart"><img src="charts/pr-ten.png" data-light="charts/light/pr-ten.png" alt="Precision-recall curves of Auricle v1 and Silero v6 on TEN VAD's human-labelled test set" loading="lazy" /><figcaption>TEN VAD's 30 human-annotated recordings (LibriSpeech, GigaSpeech, DNS Challenge). At threshold 0.5: Auricle v1 92.7% F1, Silero v6 93.6%, TEN VAD's own model 93.1%. Frame-level scoring counts every boundary frame against the model, so these are lower bounds for what a segment-level policy sees.</figcaption></figure>
+
+    <h2 id="seven-languages">Seven languages</h2>
+    <p>The same two-talker test on FLEURS, two hours per language, with a same-language background speaker. Auricle v1 was trained on English only. It transfers, with the biggest gain on English and a 15 to 35 point gain elsewhere.</p>
+    <figure class="chart"><img src="charts/languages.png" data-light="charts/light/languages.png" alt="Background false-alarm rate per language for Auricle v1 and Silero v6" loading="lazy" /><figcaption>Share of the background talker's frames called speech at threshold 0.5. Foreground recall is within a point of Silero in every language. Mandarin and Japanese also show lower agreement with Silero's own labels on clean speech (95% and 93% against 98% to 99% elsewhere); adding ten hours of each language to training did not move any number, so the gap sits in the labels, not the student.</figcaption></figure>
+
+    <h2 id="cpu-per-frame">CPU per frame</h2>
+    <p>The model is hand-written Rust compiled to WebAssembly with SIMD. There is no inference runtime to load or call through. Measured in real browsers by Playwright, 20 timed passes. The middle bar loads vad-web's own Silero v6 weights into Auricle's engine so the comparison is like for like; the first bar is what ships.</p>
+    <figure class="chart"><img src="charts/speed.png" data-light="charts/light/speed.png" alt="Per-frame cost of Auricle and onnxruntime-web in Chromium and WebKit" loading="lazy" /><figcaption>Both are far under the 32 ms budget per frame. The gain is headroom on weak devices and less battery, not lower detection latency, which is set by frame size and policy.</figcaption></figure>
+
+    <h2 id="start-up">Start-up</h2>
+    <figure class="chart"><img src="charts/startup.png" data-light="charts/light/startup.png" alt="Start-up time to a ready model for Auricle and vad-web" loading="lazy" /><figcaption>Time from the first call to a model that can score a frame. vad-web instantiates the ONNX Runtime and then builds a session from the model file; Auricle instantiates one WASM module with the weights already inside.</figcaption></figure>
+
+    <h2 id="download">Download</h2>
+    <figure class="chart"><img src="charts/size.png" data-light="charts/light/size.png" alt="Gzipped download size of Auricle and vad-web" loading="lazy" /><figcaption>The ESM package downloads only the detector a page asks for. The single-file script build carries both detectors at 1.4 MB gzipped, still a quarter of vad-web.</figcaption></figure>
+
+    <h2 id="knowing-when-you-stopped">Knowing when you stopped</h2>
+    <p>Same speech probabilities, different end-of-turn policy. 240 labelled utterances from six voices, five gap lengths, clean and with white noise at 20, 10 and 5 dB.</p>
+    <figure class="chart"><img src="charts/turn-end.png" data-light="charts/light/turn-end.png" alt="Median turn-end delay for Auricle and vad-web defaults" loading="lazy" /><figcaption>Auricle found all 240 utterances, vad-web 236; neither produced a false alarm. The cost of closing turns faster: pauses of 0.3 s inside one thought still merge into one turn, and six long sentences in noisy files were split at a comma pause. vad-web waits 1.4 s and so never splits, which suits dictation better than conversation.</figcaption></figure>
+
+    <h2 id="same-model-same-output">Same model, same output</h2>
+    <p>Maximum difference in speech probability between the Auricle forward pass and onnxruntime-web over 603 frames of speech: <strong>7.8e-7</strong>. With the Silero weights, detection quality is identical by construction. Everything above is about cost and about what sits around the model.</p>
+
+    <h2 id="what-did-not-work">What did not work</h2>
+    <ul>
+      <li>Smoothing the probability (EMA, median, hysteresis): every variant lowered F1. The recurrent state already smooths.</li>
+      <li>Scoring overlapped windows every 16 ms to halve onset latency: F1 fell from 93.7% to 89.8%. Removed.</li>
+      <li>Post-training Auricle v1 on harder two-talker mixes: the curve above did not move. Reweighting the same data adds no information.</li>
+      <li>Adding ten hours each of six non-English languages: every number moved by under 0.3 points.</li>
+    </ul>
+
+    <h2 id="what-is-not-measured-yet">What is not measured yet</h2>
+    <ul>
+      <li>Firefox and mobile browsers. Playwright could not launch Firefox on the test machine.</li>
+      <li>Real meetings with real overlap. The two-talker clips are generated from held-out speakers through measured rooms; a meeting-corpus benchmark is next.</li>
+      <li>End-to-end response latency against a live endpoint: run <code>bench/latency.mjs</code> with your key, or read the timing line under each reply in the demo.</li>
+    </ul>
+
+    <h2 id="maturity-plainly">Maturity, plainly</h2>
+    <p>vad-web: 1.58 million npm downloads in the last month, 32 releases since 2023, 26 contributors. Auricle: days old, zero releases. Smaller, faster and better with a second talker is measured; proven in the field is not.</p>
+
+    <h2 id="faq">Questions people ask</h2>
+    <h3>Is Auricle more accurate than Silero VAD?</h3>
+    <p>On one person talking, Auricle v1 is about one F1 point behind Silero v6 (92.7% vs 93.6% on TEN VAD's human-labelled test set) and far ahead when a second person is talking: it wrongly flags 35% of the background talker's speech where Silero v6 flags 81%.</p>
+    <h3>How much faster is Auricle than vad-web?</h3>
+    <p>As shipped, about 5x less CPU per 32 ms frame in Chromium and WebKit (0.035 to 0.038 ms vs 0.18 ms), about 20x faster start-up (4 to 10 ms vs 175 to 215 ms), and a 16x smaller download (346 KB vs 5,520 KB). With identical Silero v6 weights on both sides the engine alone is still 3.5x cheaper per frame, because the model is hand-written Rust compiled to WebAssembly with no inference runtime.</p>
+    <h3>How fast does Auricle detect the end of a turn?</h3>
+    <p>Median 324 ms after the user stops talking, against 1,432 ms with vad-web's default settings, on 240 labelled utterances with 100% recall and zero false alarms.</p>
+    <h3>Which languages does Auricle v1 work in?</h3>
+    <p>Tested on English, Spanish, German, Arabic, Hindi, Mandarin and Japanese with the FLEURS corpus. In every language Auricle v1 flags 15 to 47 points less of a background talker's speech than Silero v6, with foreground recall within a point.</p>
+    <h3>How do I reproduce the benchmarks?</h3>
+    <p>Every chart comes from a script in the bench/ directory of the repository or from vadtrain.prcurve in the training repository. The curve data is checked in as bench/pr-v1.json and bench/langs-v1.json.</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Auricle: open-source browser voice activity detection, turn taking and barge-in</title>
+  <meta name="description" content="Auricle is an open-source (MIT) voice activity detector, turn-taking and barge-in engine for voice agents, as Rust compiled to WebAssembly. 3.5x less CPU than vad-web with the same Silero v6 weights, 6x smaller, plus Auricle v1, a detector that ignores the other person in the room. npm install auricle." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://himanshu007-creator.github.io/auricle/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Auricle" />
+  <meta property="og:title" content="Auricle: open-source browser voice activity detection, turn taking and barge-in" />
+  <meta property="og:description" content="Auricle is an open-source (MIT) voice activity detector, turn-taking and barge-in engine for voice agents, as Rust compiled to WebAssembly. 3.5x less CPU than vad-web with the same Silero v6 weights, 6x smaller, plus Auricle v1, a detector that ignores the other person in the room. npm install auricle." />
+  <meta property="og:url" content="https://himanshu007-creator.github.io/auricle/" />
+  <meta property="og:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta property="og:image:alt" content="Auricle: the listener that knows who is talking" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Auricle: open-source browser voice activity detection, turn taking and barge-in" />
+  <meta name="twitter:description" content="Auricle is an open-source (MIT) voice activity detector, turn-taking and barge-in engine for voice agents, as Rust compiled to WebAssembly. 3.5x less CPU than vad-web with the same Silero v6 weights, 6x smaller, plus Auricle v1, a detector that ignores the other person in the room. npm install auricle." />
+  <meta name="twitter:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="https://himanshu007-creator.github.io/auricle/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="./src/style.css" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Auricle","applicationCategory":"DeveloperApplication","operatingSystem":"Web","url":"https://himanshu007-creator.github.io/auricle/","codeRepository":"https://github.com/himanshu007-creator/auricle","license":"https://opensource.org/licenses/MIT","programmingLanguage":["Rust","TypeScript"],"description":"Open-source voice activity detection, turn taking and barge-in for voice agents, running in the browser as Rust compiled to WebAssembly.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Auricle", "item": "https://himanshu007-creator.github.io/auricle/"}]}, {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Auricle", "item": "https://himanshu007-creator.github.io/auricle/"}]}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","@id":"https://himanshu007-creator.github.io/auricle/#org","name":"Auricle","url":"https://himanshu007-creator.github.io/auricle/","logo":"https://himanshu007-creator.github.io/auricle/brand/tile-green-wave.svg","sameAs":["https://github.com/himanshu007-creator/auricle","https://www.npmjs.com/package/auricle","https://huggingface.co/auricle-voice/auricle-v1"]}</script>
+</head>
+<body>
+  <nav class="top"><a class="brand" href="./"><img class="dark" src="brand/logo.svg" alt="Auricle" /><img class="light" src="brand/logo-light.svg" alt="Auricle" /></a><a href="./" class="active">Demo</a><a href="./docs.html">Docs</a><a href="./philosophy.html">Why</a><a href="./benchmarks.html">Benchmarks</a><a href="./model.html">Model</a><a href="./roadmap.html">Roadmap</a><a href="./blog/">Blog</a><a href="https://github.com/himanshu007-creator/auricle">GitHub</a><span class="spacer"></span><button class="theme-toggle" type="button" aria-label="Switch theme">☀</button></nav>
+  <header class="hero">
+    <p class="eyebrow">Open-source listener for voice agents</p>
+    <h1>The listener that knows<br />who is talking.</h1>
+    <p>Talk to an agent and interrupt it mid-sentence. Rust-in-WASM voice detection and ducking; the conversation runs on your own OpenAI-compatible API. Defaults are set for Groq. <a href="https://github.com/himanshu007-creator/auricle">Source</a></p>
+  </header>
+
+  <main class="layout">
+    <section class="left">
+      <div class="card">
+        <label>Groq API key <input id="apiKey" type="password" placeholder="gsk_..." autocomplete="off" /></label>
+        <label class="inline"><input id="remember" type="checkbox" /> Remember for this tab</label>
+        <div class="row">
+          <button id="start" type="button" class="primary">Start talking</button>
+          <button id="stopBtn" type="button" disabled>Stop</button>
+          <button id="interruptBtn" type="button" disabled>Interrupt</button>
+        </div>
+        <p class="status"><span id="dot" class="dot"></span> <strong id="state">idle</strong> <span id="status" class="muted"></span></p>
+        <p class="warn">The key stays in this page's memory and is sent only to the base URL below. Use a key you can revoke.</p>
+      </div>
+
+      <div class="card">
+        <canvas id="trace" width="800" height="140"></canvas>
+        <p class="legend"><span class="sw prob"></span> speech <span class="sw cand"></span> candidate <span class="sw conf"></span> confirmed <span class="sw stop"></span> interrupt <span class="sw agent"></span> agent audio</p>
+        <p id="readout" class="legend"></p>
+      </div>
+
+      <details class="card">
+        <summary>Advanced</summary>
+        <div class="grid">
+          <label>Base URL <input id="baseURL" value="https://api.groq.com/openai/v1" /></label>
+          <label>Speech-to-text model <input id="sttModel" value="whisper-large-v3-turbo" /></label>
+          <label>Chat model <input id="llmModel" value="openai/gpt-oss-20b" /></label>
+          <label>Text-to-speech model <input id="ttsModel" value="canopylabs/orpheus-v1-english" /></label>
+          <label>Voice <input id="voice" value="autumn" /></label>
+          <label>Extra chat body (JSON) <input id="extraBody" value='{"reasoning_effort":"low"}' /></label>
+          <label>Profile
+            <select id="profile"><option value="auto">Auto</option><option value="speakers">Speakers</option><option value="headphones">Headphones</option></select>
+          </label>
+          <label>Echo route
+            <select id="loopback"><option value="auto">Auto</option><option value="on">Loopback on</option><option value="off">Loopback off</option></select>
+          </label>
+          <label>Transcript cleanup
+            <select id="cleanup"><option value="verbatim">verbatim</option><option value="rules" selected>rules</option><option value="rules+llm">rules + LLM</option></select>
+          </label>
+        </div>
+        <div class="row">
+          <button id="testConnection" type="button">Test connection</button>
+          <button id="playClip" type="button" disabled>Play pretend agent (no API)</button>
+          <button id="export" type="button">Export session JSON</button>
+        </div>
+        <ul id="testResults" class="results"></ul>
+        <pre id="log"></pre>
+      </details>
+    </section>
+
+    <section class="right card">
+      <div id="chat" class="chat"><p class="muted empty">With a key: press Start talking, say something, and interrupt the agent whenever you like; its bubble is cut to the words you actually heard.<br><br>Without a key: press Start talking and speak. Every detected segment appears here as a playable clip, so you can check what the detector cut and where.</p></div>
+    </section>
+  </main>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

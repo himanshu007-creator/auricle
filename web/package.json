@@ -1,0 +1,67 @@
+{
+  "name": "auricle",
+  "version": "0.1.0",
+  "description": "The listener for voice agents: Rust/WASM voice activity detection, turn taking, barge-in and ducking in the browser, with any OpenAI-compatible API. Drop-in for @ricky0123/vad-web.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/auricle.js",
+  "module": "./dist/auricle.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/auricle.iife.js",
+  "jsdelivr": "./dist/auricle.iife.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/auricle.js"
+    },
+    "./compat": {
+      "types": "./dist/compat.d.ts",
+      "import": "./dist/compat.js"
+    },
+    "./iife": "./dist/auricle.iife.js"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "!dist/chunks/brain_wasm_*.map",
+    "!dist/assets/*.map",
+    "!dist/auricle.iife.js.map",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "vad",
+    "voice-activity-detection",
+    "speech-detection",
+    "voice-agent",
+    "turn-taking",
+    "barge-in",
+    "interruption",
+    "silero",
+    "webassembly",
+    "rust",
+    "audioworklet",
+    "speech-to-text",
+    "text-to-speech",
+    "openai",
+    "realtime",
+    "vad-web"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/himanshu007-creator/auricle.git",
+    "directory": "web"
+  },
+  "homepage": "https://himanshu007-creator.github.io/auricle/",
+  "bugs": "https://github.com/himanshu007-creator/auricle/issues",
+  "scripts": {
+    "build": "vite build && vite build -c vite.iife.config.ts && tsc -p tsconfig.build.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vitest": "^3.0.0"
+  },
+  "author": "Himanshu (https://github.com/himanshu007-creator)"
+}

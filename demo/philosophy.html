@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Why the listener matters more than the model: the Auricle philosophy</title>
+  <meta name="description" content="Why a voice agent's listener decides the whole experience, and what Auricle does differently: a hand-written forward pass instead of an inference runtime, graded evidence instead of a single threshold, and conversation history cut to what the user actually heard." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://himanshu007-creator.github.io/auricle/philosophy.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Auricle" />
+  <meta property="og:title" content="Why the listener matters more than the model: the Auricle philosophy" />
+  <meta property="og:description" content="Why a voice agent's listener decides the whole experience, and what Auricle does differently: a hand-written forward pass instead of an inference runtime, graded evidence instead of a single threshold, and conversation history cut to what the user actually heard." />
+  <meta property="og:url" content="https://himanshu007-creator.github.io/auricle/philosophy.html" />
+  <meta property="og:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta property="og:image:alt" content="Auricle: the listener that knows who is talking" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Why the listener matters more than the model: the Auricle philosophy" />
+  <meta name="twitter:description" content="Why a voice agent's listener decides the whole experience, and what Auricle does differently: a hand-written forward pass instead of an inference runtime, graded evidence instead of a single threshold, and conversation history cut to what the user actually heard." />
+  <meta name="twitter:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="https://himanshu007-creator.github.io/auricle/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="./src/style.css" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Auricle", "item": "https://himanshu007-creator.github.io/auricle/"}, {"@type": "ListItem", "position": 2, "name": "Why the ears come first", "item": "https://himanshu007-creator.github.io/auricle/philosophy.html"}]}, {"@type": "TechArticle", "headline": "Why the ears come first", "author": {"@type": "Person", "name": "Himanshu"}, "publisher": {"@type": "Organization", "name": "Auricle"}, "url": "https://himanshu007-creator.github.io/auricle/philosophy.html", "datePublished": "2026-10-18"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","@id":"https://himanshu007-creator.github.io/auricle/#org","name":"Auricle","url":"https://himanshu007-creator.github.io/auricle/","logo":"https://himanshu007-creator.github.io/auricle/brand/tile-green-wave.svg","sameAs":["https://github.com/himanshu007-creator/auricle","https://www.npmjs.com/package/auricle","https://huggingface.co/auricle-voice/auricle-v1"]}</script>
+</head>
+<body class="article">
+  <nav class="top"><a class="brand" href="./"><img class="dark" src="brand/logo.svg" alt="Auricle" /><img class="light" src="brand/logo-light.svg" alt="Auricle" /></a><a href="./">Demo</a><a href="./docs.html">Docs</a><a href="./philosophy.html">Why</a><a href="./benchmarks.html">Benchmarks</a><a href="./model.html">Model</a><a href="./roadmap.html">Roadmap</a><a href="./blog/">Blog</a><a href="https://github.com/himanshu007-creator/auricle">GitHub</a><span class="spacer"></span><button class="theme-toggle" type="button" aria-label="Switch theme">☀</button></nav>
+  <main class="prose">
+    <h1>Why the ears come first</h1>
+    <p class="lede">Every voice agent is a language model wearing a pair of ears. The model has been getting better every quarter. The ears have not. Auricle is a bet that the next large gain in voice agents is not a bigger model but a better listener: one that knows when you have started, when you have stopped, when you meant to interrupt, and what you actually heard.</p>
+
+    <h2 id="what-we-did-differently">What we did differently</h2>
+    <h3>The listener is a program, not a plugin</h3>
+    <p>Most browser voice stacks bolt a detector onto a page: a multi-megabyte inference runtime, a model file to copy, inference on the main thread, and a callback that fires when the model thinks you are done. Auricle is one Rust program compiled to WebAssembly and split across the places audio actually lives: a capture worklet, a decision worker, a playback worklet. The decision to duck the agent travels from the worker to the playback worklet over a direct channel. No main thread, no network, no garbage collector in the way.</p>
+
+    <h3>We wrote the forward pass by hand</h3>
+    <p>The Silero model is six operations in a row: a windowed FFT, four convolutions, a recurrent cell, a sigmoid. We wrote those in Rust instead of shipping a general runtime to execute a graph description of them. The outputs match the reference runtime to a millionth, the frame costs 0.05 ms in Chromium and WebKit, the whole thing is 925 KB including the weights, and there is no file to copy. Doing less is the optimisation.</p>
+
+    <h3>Evidence has grades</h3>
+    <p>A single threshold is a coin flip at every boundary. Auricle emits a <em>candidate</em> after three voiced frames and a <em>confirmation</em> when six of the last ten agree. Candidates trigger things that can be undone: duck the agent, open a buffer, start a transcription that may be thrown away. Confirmations trigger things that cannot: stop the voice, cancel the request, rewrite history. A candidate that never confirms is a misfire, and the agent gets its voice back. That one distinction is most of what makes an interruption feel natural rather than twitchy.</p>
+
+    <h3>The agent never hears a word you did not say</h3>
+    <p>Fillers are information for the turn manager ("uh" at the end of a sentence means you are not done) and noise for the model. So there are two transcripts: verbatim for the listener, clean for the agent. The clean one is produced by deletion only, and a verifier checks that it is a subsequence of what you said. If a cleanup stage, including an LLM one, ever invents a word, its output is discarded.</p>
+
+    <h3>History is what was heard, not what was generated</h3>
+    <p>When you interrupt, the agent's last message is cut to the words that actually left the speaker, measured by the sample counter in the playback worklet, and marked as interrupted. The model's next turn starts from the conversation you experienced, not from a paragraph you never heard.</p>
+
+    <h3>Every claim ships with the script that proves it</h3>
+    <p>Speed, size, parity, accuracy on human-labelled recordings, a browser matrix, and the experiments that failed: all of it is in <code>bench/</code>, and the <a href="./benchmarks.html">benchmarks page</a> only states numbers those scripts produced. Two ideas we expected to win, probability smoothing and a 16 ms hop, lost on the data and were removed. We would rather publish a negative result than a slogan.</p>
+
+    <h2 id="why-voice-activity-detection-is-the-future-not-the-past">Why voice activity detection is the future, not the past</h2>
+    <p>It is tempting to think end-to-end speech models will make the detector obsolete. In practice every deployed voice agent still needs to know, at a granularity of tens of milliseconds and with a cost of nothing, whether a human is speaking. That question gates everything downstream: when to transcribe, when to think, when to stop talking, when to listen harder. The more capable the model behind it, the more expensive each false start and each late stop becomes. The detector is the cheapest component and the one with the highest leverage on how the whole system feels.</p>
+    <p>The open problems are <em>whose</em> voice counts (foreground detection without enrollment), <em>when</em> a pause is a pause (learned endpointing instead of a fixed timer), and how to overlap thinking with listening without wasting tokens. None of those is a bigger model. All of them are a better listener. That is the work on the <a href="./roadmap.html">roadmap</a>.</p>
+
+    <h2 id="who-this-is-for">Who this is for</h2>
+    <p>People who build agents and want them to be usable by voice without becoming audio engineers. You bring any OpenAI-compatible endpoint. Auricle brings the ears, the manners and the numbers.</p>
+  </main>
+</body>
+</html>

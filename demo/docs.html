@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Auricle docs: install, detect speech, swap out vad-web, run a full voice agent</title>
+  <meta name="description" content="Get started with Auricle in the browser: npm install auricle, createVad for speech detection in ten lines, auricle/compat as a one-import replacement for @ricky0123/vad-web, React hooks, a script tag from jsDelivr, and the Auricle class for barge-in with any OpenAI-compatible API." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://himanshu007-creator.github.io/auricle/docs.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Auricle" />
+  <meta property="og:title" content="Auricle docs: install, detect speech, swap out vad-web, run a full voice agent" />
+  <meta property="og:description" content="npm install auricle. createVad in ten lines, auricle/compat for vad-web users, React hooks, a CDN script tag, and the Auricle class for barge-in with any OpenAI-compatible API." />
+  <meta property="og:url" content="https://himanshu007-creator.github.io/auricle/docs.html" />
+  <meta property="og:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta property="og:image:alt" content="Auricle: the listener that knows who is talking" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Auricle docs" />
+  <meta name="twitter:description" content="npm install auricle. createVad in ten lines, auricle/compat for vad-web users, React hooks, a CDN script tag, and the Auricle class for barge-in with any OpenAI-compatible API." />
+  <meta name="twitter:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="https://himanshu007-creator.github.io/auricle/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="./src/style.css" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://himanshu007-creator.github.io/auricle/#org","name":"Auricle","url":"https://himanshu007-creator.github.io/auricle/","logo":"https://himanshu007-creator.github.io/auricle/brand/tile-green-wave.svg","sameAs":["https://github.com/himanshu007-creator/auricle","https://www.npmjs.com/package/auricle","https://huggingface.co/auricle-voice/auricle-v1"]},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Auricle","item":"https://himanshu007-creator.github.io/auricle/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://himanshu007-creator.github.io/auricle/docs.html"}]},{"@type":"TechArticle","headline":"Auricle documentation","url":"https://himanshu007-creator.github.io/auricle/docs.html","author":{"@type":"Person","name":"Himanshu"},"publisher":{"@type":"Organization","name":"Auricle"},"datePublished":"2026-10-18","proficiencyLevel":"Beginner"},{"@type":"HowTo","name":"Detect speech in the browser with Auricle","step":[{"@type":"HowToStep","name":"Install","text":"npm install auricle"},{"@type":"HowToStep","name":"Create a detector","text":"import { createVad } from 'auricle'; const vad = await createVad({ onSpeechEnd: (audio) => upload(audio) });"},{"@type":"HowToStep","name":"Start from a user gesture","text":"await vad.start(); the browser asks for the microphone."}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How do I replace @ricky0123/vad-web with Auricle?","acceptedAnswer":{"@type":"Answer","text":"Change the import from '@ricky0123/vad-web' to 'auricle/compat'. MicVAD.new, start, pause, destroy, onSpeechStart, onSpeechRealStart, onSpeechEnd, onVADMisfire and utils.encodeWAV keep their names. Delete baseAssetPath and onnxWASMBasePath; there are no files to copy."}},{"@type":"Question","name":"Does Auricle need onnxruntime-web or any model files?","acceptedAnswer":{"@type":"Answer","text":"No. The detector is Rust compiled to WebAssembly with the weights inside the module. The npm package contains everything; nothing is fetched from a CDN at runtime."}},{"@type":"Question","name":"Which detector does Auricle use?","acceptedAnswer":{"@type":"Answer","text":"Auricle v1, an 83k-parameter model trained from scratch to detect the person in front of the microphone and ignore a second talker in the room. It is the only detector in the npm package; the whole engine is 350 KB gzipped. On single-speaker audio it is about one F1 point behind Silero VAD v6; with a background talker it wrongly flags 35% of that talker's speech where Silero flags 81%."}},{"@type":"Question","name":"Does Auricle work with React?","acceptedAnswer":{"@type":"Answer","text":"Yes. npm install auricle-react gives useVad, useMicVAD (the @ricky0123/vad-react shape) and useAuricle for the full conversation."}}]}]}</script>
+</head>
+<body class="article">
+  <nav class="top"><a class="brand" href="./"><img class="dark" src="brand/logo.svg" alt="Auricle" /><img class="light" src="brand/logo-light.svg" alt="Auricle" /></a><a href="./">Demo</a><a href="./docs.html" class="active">Docs</a><a href="./benchmarks.html">Benchmarks</a><a href="./model.html">Model</a><a href="./philosophy.html">Why</a><a href="./roadmap.html">Roadmap</a><a href="./blog/">Blog</a><a href="https://github.com/himanshu007-creator/auricle">GitHub</a><span class="spacer"></span><button class="theme-toggle" type="button" aria-label="Switch theme">☀</button></nav>
+  <main class="prose wide">
+    <h1>Docs</h1>
+    <p class="lede">One npm package. Three ways in, from a ten-line speech detector to a full interruptible voice agent. Everything runs in the browser; nothing is fetched at runtime.</p>
+
+    <div class="cards">
+      <a href="#detect"><strong>Detect speech</strong><span>createVad: start, end, confirmed, misfire events and the raw audio.</span></a>
+      <a href="#vad-web"><strong>Coming from vad-web</strong><span>Change one import. Same MicVAD API, no model files to copy.</span></a>
+      <a href="#react"><strong>React</strong><span>useVad, useMicVAD and useAuricle hooks.</span></a>
+      <a href="#agent"><strong>Full voice agent</strong><span>Barge-in, ducking and heard-text truncation with any OpenAI-compatible API.</span></a>
+    </div>
+
+    <h2 id="install">Install</h2>
+    <pre><code>npm install auricle            # core: createVad, Auricle, auricle/compat
+npm install auricle-react      # React hooks (peer: auricle, react &gt;= 18)</code></pre>
+    <p>No bundler? One script tag defines <code>window.Auricle</code>. The script build carries both detectors (1.4 MB gzipped); the ESM build above downloads only the detector you ask for.</p>
+    <pre><code>&lt;script src="https://cdn.jsdelivr.net/npm/auricle@0.1.0/dist/auricle.iife.js"&gt;&lt;/script&gt;
+&lt;!-- or https://unpkg.com/auricle@0.1.0/dist/auricle.iife.js --&gt;</code></pre>
+    <p>Requirements: a browser with AudioWorklet and WebAssembly SIMD (Chrome 91+, Edge 91+, Safari 16.4+, Firefox 89+), a secure context (https or localhost) for the microphone, and a user gesture before <code>start()</code>.</p>
+
+    <h2 id="detect">Detect speech</h2>
+    <p>The detector reports graded events so your UI can react early and act late: a <em>candidate</em> after three voiced frames (about 100 ms), a <em>confirmation</em> after six of the last ten, and the finished segment as 16 kHz audio with 512 ms of pre-roll.</p>
+    <pre><code>import { createVad } from 'auricle';
+
+const vad = await createVad({
+  onSpeechStart:     ({ tMs }) =&gt; ui.listening(),   // candidate: reversible actions (show a meter, duck music)
+  onSpeechConfirmed: () =&gt; ui.speaking(),           // confirmed: irreversible actions (stop the agent)
+  onSpeechEnd:       (audio, span) =&gt; upload(audio), // Float32Array at 16 kHz, with pre-roll
+  onMisfire:         () =&gt; ui.listening(),          // a candidate that never confirmed
+  onFrame:           (p) =&gt; meter.set(p),           // speech probability every 32 ms
+});
+await vad.start();   // call from a click: the browser asks for the microphone
+vad.pause(); vad.resume(); vad.setThresholds({ minSpeechMs: 200 }); vad.stop();
+
+// onSegment gives the same audio with timing and a WAV helper:
+createVad({ onSegment: (s) =&gt; upload(s.wav()) });     // s.audio, s.startMs, s.endMs, s.durationMs, s.wav()
+vad.stats.sttShare;  // share of the session that was sent to speech-to-text, 0 to 1</code></pre>
+    <p>Every option, method, event and type has a JSDoc comment, so autocomplete and a language model reading the types get the full contract.</p>
+    <h3>Options</h3>
+    <table>
+      <thead><tr><th>Option</th><th>Default</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>profile</code></td><td><code>'speakers'</code></td><td><code>'headphones'</code> uses lower thresholds while the agent talks, because there is no echo to guard against.</td></tr>
+        <tr><td><code>thresholds.positive</code></td><td>0.5</td><td>Probability a frame needs to count as voiced.</td></tr>
+        <tr><td><code>thresholds.negative</code></td><td>0.35</td><td>Below this a frame counts as silent. The gap between the two is hysteresis.</td></tr>
+        <tr><td><code>thresholds.hangoverMs</code></td><td>240</td><td>Silence needed before the segment ends. vad-web's default is 1,400.</td></tr>
+        <tr><td><code>thresholds.minSpeechMs</code></td><td>100</td><td>Segments shorter than this are dropped as misfires. Raise it for keyboards and clicks.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="vad-web">Coming from vad-web</h2>
+    <p>Change one import. The class, the method names and the callback names stay the same.</p>
+    <pre><code>import { MicVAD, utils } from 'auricle/compat';   // was '@ricky0123/vad-web'
+
+const vad = await MicVAD.new({
+  onSpeechStart:     () =&gt; ui.listening(),
+  onSpeechRealStart: () =&gt; ui.speaking(),
+  onSpeechEnd:       (audio) =&gt; upload(utils.encodeWAV(audio)),
+  onVADMisfire:      () =&gt; ui.listening(),
+});
+vad.start();</code></pre>
+    <p>Delete <code>baseAssetPath</code>, <code>onnxWASMBasePath</code> and any copied <code>.onnx</code> or <code>.wasm</code> files. <code>redemptionMs</code> maps to the hangover; <code>positiveSpeechThreshold</code> and <code>negativeSpeechThreshold</code> map to the thresholds above. The full mapping and the differences are in <a href="https://github.com/himanshu007-creator/auricle/blob/main/docs/MIGRATING_FROM_VAD_WEB.md">MIGRATING_FROM_VAD_WEB.md</a>.</p>
+
+    <h2 id="react">React</h2>
+    <pre><code>import { useVad, useMicVAD, useAuricle } from 'auricle-react';
+
+const { listening, speaking, probability, segments, toggle } = useVad({ onSpeechEnd: upload });
+const mic = useMicVAD({ onSpeechEnd: upload });                      // the @ricky0123/vad-react shape
+const { state, turns, agentText, heardText, start, interrupt } = useAuricle({ backend });</code></pre>
+
+    <h2 id="agent">Full voice agent</h2>
+    <p>The <code>Auricle</code> class runs the conversation against any OpenAI-compatible endpoint: speech-to-text, chat completions over SSE, and text-to-speech. The listener ducks the agent's audio within 30 ms of a speech candidate, stops it within 15 ms of confirmation, and cuts the agent's message history to the words the user actually heard, so the model never argues with sentences nobody listened to.</p>
+    <pre><code>import { Auricle, OpenAICompat } from 'auricle';
+
+const auricle = await Auricle.create({
+  backend: new OpenAICompat({
+    baseURL: 'https://api.groq.com/openai/v1',
+    apiKey,
+    models: { stt: 'whisper-large-v3-turbo', llm: 'openai/gpt-oss-20b', tts: 'canopylabs/orpheus-v1-english' },
+    voice: 'autumn',
+  }),
+  profile: 'speakers',          // or 'headphones'
+});
+auricle.on('state',       (s) =&gt; ui.set(s));        // listening | user_speaking | thinking | agent_speaking
+auricle.on('turn',        (t) =&gt; log(t.clean, t.verbatim));
+auricle.on('interrupted', (e) =&gt; log(e.heardText, e.stopLatencyMs));
+auricle.on('metrics',     (m) =&gt; log(m.endToFirstAudioMs));
+await auricle.start();</code></pre>
+    <p>Key handling: the demo keeps your key in the tab only. In production put the key on your server and point <code>baseURL</code> at a proxy that adds it.</p>
+
+    <h2 id="what-it-saves">What it saves, measured</h2>
+    <p>Three things cost money in a voice agent: audio sent to speech-to-text, text sent to text-to-speech, and the time a user waits. Auricle counts the first two per session from its own events, so the number is yours, not ours.</p>
+    <pre><code>import { formatStats } from 'auricle';
+
+const s = auricle.stats;        // or vad.stats, or useVad().stats
+s.speechMs      // audio that left the browser for STT (only finished speech segments are sent)
+s.sessionMs     // how long the microphone was open
+s.sttShare      // speechMs / sessionMs: an always-on streaming STT connection would bill 1.0
+s.ttsCharsGenerated, s.ttsCharsAvoided   // characters spoken vs. characters the model wrote that nobody heard
+s.interruptions, s.stopLatencyMedianMs   // how often the user cut in, and how fast the audio stopped
+formatStats(s)  // "session 2:14 · sent to STT 0:31 (23%) · TTS chars 812, avoided 1,040 · 2 interruptions, median stop 41 ms"</code></pre>
+    <p>What that means in practice, stated carefully:</p>
+    <ul>
+      <li><strong>Speech-to-text.</strong> Only finished speech segments are uploaded. A session where the user talks for a quarter of the time sends a quarter of the audio a streaming connection would. <code>sttShare</code> is that fraction, measured. Segments whose loudest 100 ms stays under -45 dBFS are never sent, so breathing and room tone do not become transcription requests.</li>
+      <li><strong>Text-to-speech and model output.</strong> When the user interrupts, generation is aborted and the agent's history is cut to the words they heard. <code>ttsCharsAvoided</code> is the text that was never synthesised or never played. With a per-character TTS price that is the saved spend; the model also stops producing tokens nobody will hear.</li>
+      <li><strong>Time.</strong> Turn end is detected 324 ms after the user stops, against 1,432 ms with vad-web's defaults (<a href="benchmarks.html#knowing-when-you-stopped">measured</a>), and speech-to-text starts during the hangover rather than after it.</li>
+      <li><strong>What we do not claim.</strong> No dollar figure. Vendor rates differ and change monthly; multiply the counters by yours. The counters are per browser session; aggregate them server-side if you want fleet numbers.</li>
+    </ul>
+
+    <h2 id="how-it-runs">How it runs</h2>
+    <pre><code>mic ──► capture worklet (Rust: resample, 512-sample frames) ──► brain worker (Rust: VAD, turn machine, arbiter)
+                                                                       │ duck / unduck / stop
+                                                                       ▼
+speakers ◄── playback worklet (Rust: ring buffer, duck, fade, played counter) ◄── TTS chunks
+main thread: Auricle class ── STT, chat, TTS over fetch ── heard-text truncation</code></pre>
+    <p>The decision to duck or stop never touches the main thread or the network. The detector runs in a worker; the audio stays in the worklets. Full type reference: <code>web/src/vad.ts</code>, <code>web/src/compat.ts</code>, <code>web/src/auricle.ts</code> and <code>react/src</code> in the repository.</p>
+
+    <h2 id="more">More</h2>
+    <ul>
+      <li><a href="./benchmarks.html">Benchmarks</a>: every number with the script that reproduces it.</li>
+      <li><a href="./model.html">Auricle v1 model card</a>: architecture, data, caveats, languages.</li>
+      <li><a href="https://github.com/himanshu007-creator/auricle/blob/main/docs/COMPARISON.md">COMPARISON.md</a>: the long version of the comparison with vad-web, Silero VAD and TEN VAD.</li>
+      <li><a href="https://huggingface.co/auricle-voice/auricle-v1">auricle-voice/auricle-v1</a> on Hugging Face: weights, layout and ONNX.</li>
+      <li><a href="./llms.txt">llms.txt</a> and <a href="./llms-full.txt">llms-full.txt</a>: this site for language models.</li>
+    </ul>
+  </main>
+  <script src="theme.js"></script>
+</body>
+</html>

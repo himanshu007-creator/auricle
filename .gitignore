@@ -1,0 +1,17 @@
+target/
+node_modules/
+dist/
+web/src/generated/
+tools/.venv/
+*.wasm.opt
+.DS_Store
+bench/data/
+__pycache__/
+
+# Local and private
+.claude/
+.env
+.env.*
+*.log
+.vscode/
+.idea/

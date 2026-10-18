@@ -1,0 +1,68 @@
+# Auricle
+
+> Auricle is an open-source (MIT) listener for voice agents that runs in the browser: voice activity detection, turn taking, barge-in and ducking as one Rust program compiled to WebAssembly, with an adapter for any OpenAI-compatible speech-to-text, chat and text-to-speech API. npm package `auricle`, React hooks in `auricle-react`, drop-in replacement for `@ricky0123/vad-web` via `auricle/compat`. The detector is Auricle v1, an 83k-parameter model trained from scratch to ignore a second talker in the room; the whole engine is 350 KB gzipped. Silero VAD v6 is available only as an opt-in feature of the Rust crate, for the engine benchmark against vad-web.
+
+Measured facts (every chart on the benchmarks page has a script in the repository's `bench/` directory that reproduces it; curve data is checked in as `bench/pr-v1.json` and `bench/langs-v1.json`):
+
+- As shipped (Auricle v1), measured in Chromium 145 and WebKit 26: 0.035 to 0.038 ms per 32 ms frame versus 0.18 ms for vad-web (onnxruntime-web), about 5x; start-up 4 to 10 ms versus 175 to 215 ms; download 346 KB gzipped versus 5,520 KB. Like-for-like engine test with vad-web's own Silero VAD v6 weights loaded into Auricle's engine: output difference 7.8e-7, 0.05 ms per frame, 3.5x cheaper.
+- Turn end 324 ms after the user stops versus 1,432 ms with vad-web defaults, at 100% recall and zero false alarms on 240 labelled utterances.
+- Auricle v1 on TEN VAD's 30 human-labelled recordings: 92.7% F1 (Silero v6: 93.6%, TEN VAD: 93.1%). With a second talker 3 to 15 dB quieter in the same room: Auricle v1 wrongly flags 35% of the other person's frames, Silero v6 81%, at the same foreground recall (about 98%). Measured on English, Spanish, German, Arabic, Hindi, Mandarin and Japanese (FLEURS); the gain holds in every language.
+- Ducking in 30 ms and hard stop in 15 ms on interruption; the agent's history is cut to the words the user actually heard.
+- Auricle v1: 83,393 parameters, 40-band log-mel, two causal convolutions, two-layer GRU, 16 ms hop, 334 KB float32 weights, trained from scratch on public data with Silero v6 labels and competing-talker mixing. Weights, layout and ONNX at https://huggingface.co/auricle-voice/auricle-v1.
+
+## Pages
+
+- [Demo](https://himanshu007-creator.github.io/auricle/): talk to an agent with your own API key, or record segments with no key.
+- [Docs](https://himanshu007-creator.github.io/auricle/docs.html): install, createVad, the vad-web compat layer, React hooks, the Auricle class, options table.
+- [Benchmarks](https://himanshu007-creator.github.io/auricle/benchmarks.html): seven charts, each with its reproduce command, plus questions people ask.
+- [Model](https://himanshu007-creator.github.io/auricle/model.html): Auricle v1 card, data, caveats, per-language results.
+- [Why](https://himanshu007-creator.github.io/auricle/philosophy.html): what was done differently and why the listener matters.
+- [Roadmap](https://himanshu007-creator.github.io/auricle/roadmap.html): field truth, echo, voice enrolment, learned endpointing, every language.
+- [Blog](https://himanshu007-creator.github.io/auricle/blog/): A browser VAD without an inference runtime; The other person in the room; What silence costs a voice agent.
+- [Repository](https://github.com/himanshu007-creator/auricle): source; docs/COMPARISON.md (full comparison), docs/MODEL_CARD.md, docs/MIGRATING_FROM_VAD_WEB.md, docs/RESEARCH.md (what was tried, including what failed).
+- [npm: auricle](https://www.npmjs.com/package/auricle), [npm: auricle-react](https://www.npmjs.com/package/auricle-react), [Hugging Face: auricle-voice/auricle-v1](https://huggingface.co/auricle-voice/auricle-v1).
+- [llms-full.txt](https://himanshu007-creator.github.io/auricle/llms-full.txt): the docs, the comparison, the model card and the migration guide in one file.
+
+## Integration
+
+```ts
+import { createVad, Auricle, OpenAICompat, formatStats } from 'auricle';
+
+// Level 1: the detector
+const vad = await createVad({
+  onSpeechStart: ({ tMs }) => {},            // candidate, ~100 ms in, reversible actions
+  onSpeechConfirmed: ({ tMs }) => {},        // confirmed, 200 to 320 ms in, irreversible actions
+  onSegment: (s) => upload(s.wav()),         // s.audio (Float32Array 16 kHz), s.startMs, s.endMs, s.durationMs, s.wav() -> Blob
+  onMisfire: () => {}, onFrame: (p, tMs) => {}, onError: (e) => {},
+  thresholds: { positive: 0.5, negative: 0.35, hangoverMs: 240, minSpeechMs: 100 },
+});
+await vad.start();                           // from a user gesture
+vad.pause(); vad.resume(); vad.setThresholds({ minSpeechMs: 200 }); vad.stop();
+vad.stats;                                   // SessionStats: sessionMs, speechMs, sttShare, segments, misfires, ...
+
+// Level 2: coming from vad-web, change one import
+import { MicVAD, utils } from 'auricle/compat';   // was '@ricky0123/vad-web'; MicVAD.new, start, pause, destroy, onSpeechStart, onSpeechRealStart, onSpeechEnd, onVADMisfire, utils.encodeWAV
+
+// Level 3: the whole conversation against any OpenAI-compatible API
+const auricle = await Auricle.create({ backend: new OpenAICompat({ baseURL, apiKey, models: { stt, llm, tts }, voice }), profile: 'speakers' });
+auricle.on('state', (s) => {});              // listening | user_speaking | thinking | agent_speaking
+auricle.on('turn', (t) => {});               // t.verbatim, t.clean, t.metrics
+auricle.on('interrupted', (e) => {});        // e.heardText, e.generatedText, e.stopLatencyMs
+await auricle.start(); auricle.interrupt(); auricle.stop();
+formatStats(auricle.stats);                  // "session 2:14 · sent to STT 0:31 (23%) · TTS chars 812, avoided 1,040 · 2 interruptions, median stop 41 ms"
+
+// React: npm install auricle-react
+import { useVad, useMicVAD, useAuricle } from 'auricle-react';
+const { listening, speaking, probability, segments, stats, start, stop, pause, resume, toggle } = useVad({ onSegment });
+const { state, turns, agentText, heardText, metrics, stats, start, stop, interrupt } = useAuricle({ backend });
+```
+
+Every option, method, event and type carries a JSDoc comment in the published .d.ts files.
+
+## What it saves (measured per session, no dollar claims)
+
+`auricle.stats` counts, from the session's own events: milliseconds of audio sent to speech-to-text versus session length (`sttShare`; an always-on streaming STT connection bills 1.0), text-to-speech characters synthesised versus characters the model wrote that the user never heard because they interrupted (`ttsCharsAvoided`), the number of interruptions and the median stop latency. Only finished speech segments are uploaded, and segments under -45 dBFS peak are never sent. Vendor rates differ and change monthly, so multiply the counters by your own rates; Auricle publishes no dollar figure.
+
+## How to cite
+
+Auricle (2026). Browser voice activity detection, turn taking and barge-in in Rust and WebAssembly. https://github.com/himanshu007-creator/auricle. Model: Auricle v1, https://huggingface.co/auricle-voice/auricle-v1. MIT.

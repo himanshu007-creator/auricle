@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/auricle-dsp",
+  "crates/auricle-vad",
+  "crates/auricle-turn",
+  "crates/auricle-text",
+  "crates/auricle-worklet",
+  "crates/auricle-brain",
+  "crates/auricle-eval",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/himanshu007-creator/auricle"
+homepage = "https://himanshu007-creator.github.io/auricle/"
+authors = ["Himanshu"]
+keywords = ["vad", "voice-activity-detection", "speech", "wasm", "audio"]
+categories = ["multimedia::audio", "wasm"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

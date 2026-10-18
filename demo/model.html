@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Auricle v1 model card: an 83k-parameter foreground-selective voice activity detector</title>
+  <meta name="description" content="Auricle v1 is an 83,393-parameter voice activity detector (log-mel, two causal convolutions, two-layer GRU) trained from scratch with competing-talker mixing. 92.7% F1 on TEN VAD's human-labelled set, 35% background false alarms vs 81% for Silero VAD v6, 334 KB of weights, MIT, seven languages tested." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://himanshu007-creator.github.io/auricle/model.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Auricle" />
+  <meta property="og:title" content="Auricle v1 model card: an 83k-parameter foreground-selective voice activity detector" />
+  <meta property="og:description" content="Auricle v1 is an 83,393-parameter voice activity detector (log-mel, two causal convolutions, two-layer GRU) trained from scratch with competing-talker mixing. 92.7% F1 on TEN VAD's human-labelled set, 35% background false alarms vs 81% for Silero VAD v6, 334 KB of weights, MIT, seven languages tested." />
+  <meta property="og:url" content="https://himanshu007-creator.github.io/auricle/model.html" />
+  <meta property="og:image" content="https://himanshu007-creator.github.io/auricle/og.png" />
+  <meta property="og:image:alt" content="Auricle: the listener that knows who is talking" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="https://himanshu007-creator.github.io/auricle/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="https://himanshu007-creator.github.io/auricle/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="./src/style.css" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Auricle", "item": "https://himanshu007-creator.github.io/auricle/"}, {"@type": "ListItem", "position": 2, "name": "Auricle v1", "item": "https://himanshu007-creator.github.io/auricle/model.html"}]}, {"@type": "SoftwareSourceCode", "name": "Auricle v1", "description": "83k-parameter foreground-selective voice activity detector, MIT.", "codeRepository": "https://github.com/himanshu007-creator/auricle", "programmingLanguage": ["Rust", "Python"], "license": "https://opensource.org/licenses/MIT", "url": "https://himanshu007-creator.github.io/auricle/model.html", "sameAs": "https://huggingface.co/auricle-voice/auricle-v1"}, {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is Auricle v1?", "acceptedAnswer": {"@type": "Answer", "text": "An open-source voice activity detection model with 83,393 parameters: 40-band log-mel features, two causal 1-D convolutions and a two-layer GRU, scoring 16 ms hops. It is trained to detect the person in front of the microphone rather than any speech in the room."}}, {"@type": "Question", "name": "How was Auricle v1 trained?", "acceptedAnswer": {"@type": "Answer", "text": "From scratch on public speech (LibriSpeech), noise, music and room impulse responses, with Silero VAD v6 providing frame labels on the clean audio. The audio the model hears is then corrupted with rooms, noise and a competing talker in 45% of clips while the clean labels are kept, so the model must learn to separate the foreground voice."}}, {"@type": "Question", "name": "How big is Auricle v1?", "acceptedAnswer": {"@type": "Answer", "text": "334 KB of float32 weights, 338 KB gzipped as a WebAssembly module with the weights inside. Silero VAD v6 is about 1M parameters and 974 KB."}}, {"@type": "Question", "name": "Can I use Auricle v1 outside the browser?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. The weights ship as a flat float32 blob with a JSON layout and as ONNX on Hugging Face (auricle-voice/auricle-v1), and the Rust crate auricle-vad runs on any target."}}]}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","@id":"https://himanshu007-creator.github.io/auricle/#org","name":"Auricle","url":"https://himanshu007-creator.github.io/auricle/","logo":"https://himanshu007-creator.github.io/auricle/brand/tile-green-wave.svg","sameAs":["https://github.com/himanshu007-creator/auricle","https://www.npmjs.com/package/auricle","https://huggingface.co/auricle-voice/auricle-v1"]}</script>
+</head>
+<body class="article">
+  <nav class="top"><a class="brand" href="./"><img class="dark" src="brand/logo.svg" alt="Auricle" /><img class="light" src="brand/logo-light.svg" alt="Auricle" /></a><a href="./">Demo</a><a href="./docs.html">Docs</a><a href="./philosophy.html">Why</a><a href="./benchmarks.html">Benchmarks</a><a href="./model.html" class="active">Model</a><a href="./roadmap.html">Roadmap</a><a href="./blog/">Blog</a><a href="https://github.com/himanshu007-creator/auricle">GitHub</a><span class="spacer"></span><button class="theme-toggle" type="button" aria-label="Switch theme">☀</button></nav>
+  <main class="prose">
+    <h1>Auricle v1</h1>
+    <p class="lede">Our own voice activity detector, trained from scratch for one job the standard models do not do: keep listening to the user when somebody else in the room is talking. 83,393 parameters, 334 KB of weights, one decision every 16 ms. MIT. Weights on Hugging Face as <code>auricle-voice/auricle-v1</code>.</p>
+
+    <h2 id="what-it-is">What it is</h2>
+    <p>40-band log-mel features every 16 ms, two causal convolutions, a two-layer GRU of 64 units, one sigmoid per frame. It runs as a hand-written Rust forward pass inside the same WebAssembly module as the rest of Auricle, selected with <code>model: 'auricle'</code>. Silero VAD v6 stays bundled as <code>model: 'silero'</code>, which is the default until the field numbers for v1 are in.</p>
+
+    <h2 id="numbers">Numbers</h2>
+    <p>Every row is produced by a script in the training repository and can be re-run. Silero v6 is scored on identical audio.</p>
+    <table>
+      <tr><th></th><th>Auricle v1</th><th>Silero v6</th></tr>
+      <tr><td>TEN VAD test set, 30 human-labelled recordings, frame F1 at 0.5</td><td>92.7%</td><td>93.6%</td></tr>
+      <tr><td>Competing talker, 500 clips: foreground F1</td><td><strong>94.2%</strong></td><td>89.4%</td></tr>
+      <tr><td>Competing talker: foreground recall</td><td>97.3%</td><td>97.4%</td></tr>
+      <tr><td>Competing talker: background-only frames called speech</td><td><strong>35%</strong></td><td>82%</td></tr>
+      <tr><td>Parameters</td><td>83k</td><td>about 1M</td></tr>
+      <tr><td>Weights</td><td>334 KB</td><td>974 KB</td></tr>
+    </table>
+    <figure class="chart"><img src="charts/pr-competing.png" data-light="charts/light/pr-competing.png" alt="Background false-alarm rate against foreground recall with a second talker in the room, Auricle v1 vs Silero v6" loading="lazy" /><figcaption>Every threshold, same frames. At any share of the user's speech kept, Auricle v1 lets through three to four times less of the other person. The single-speaker curve and the per-language chart are on the <a href="benchmarks.html">benchmarks page</a>.</figcaption></figure>
+    <p>Across languages (FLEURS test splits, two hours each, same-language background talker):</p>
+    <table>
+      <tr><th>Language</th><th>Clean agreement with Silero's labels</th><th>Competing F1, v1 vs Silero</th><th>Background false alarms, v1 vs Silero</th></tr>
+      <tr><td>English</td><td>98.6%</td><td>94.6% vs 89.7%</td><td>35% vs 82%</td></tr>
+      <tr><td>Spanish</td><td>98.6%</td><td>95.9% vs 93.3%</td><td>52% vs 87%</td></tr>
+      <tr><td>German</td><td>98.4%</td><td>94.5% vs 92.3%</td><td>61% vs 83%</td></tr>
+      <tr><td>Arabic</td><td>98.1%</td><td>96.4% vs 94.5%</td><td>59% vs 83%</td></tr>
+      <tr><td>Hindi</td><td>97.4%</td><td>95.3% vs 93.4%</td><td>60% vs 80%</td></tr>
+      <tr><td>Mandarin</td><td>95.0%</td><td>89.5% vs 86.1%</td><td>59% vs 84%</td></tr>
+      <tr><td>Japanese</td><td>93.3%</td><td>90.1% vs 87.3%</td><td>63% vs 77%</td></tr>
+    </table>
+
+    <h2 id="how-it-was-trained">How it was trained</h2>
+    <p>961 hours of LibriSpeech read speech, labelled once on the clean audio by Silero VAD v6. The model never hears that clean audio. Each training clip is the labelled speech after a room impulse response, MUSAN noise or music, a second talker 3 to 25 dB quieter in 45% of clips, crowd babble, laughs and coughs at the user's level, bandlimiting, clipping and random gain. The labels stay those of the foreground speaker, so the only way to score well is to learn which voice is the user. 20,000 steps of 128 five-second clips on a six-core laptop CPU, 9.7 hours.</p>
+    <ol>
+      <li><strong>Label clean speech once.</strong> 961 hours of LibriSpeech, a speech or silence label every 16 ms on the clean recording. The model never hears that audio.</li>
+      <li><strong>Corrupt what the model hears.</strong> A real room response (50% of clips), MUSAN noise or music at -5 to 25 dB (85%), a second held-out speaker 3 to 25 dB quieter labelled as not speech (45%, a quarter of those crowd babble), laughs, coughs, sighs and sniffs at the user's level labelled as not speech (20%), band-limiting (20%), clipping (10%), gain -30 to 0 dB, and 12% of clips with no foreground speech at all.</li>
+      <li><strong>Keep the clean labels.</strong> A frame where only the background talker speaks is labelled silent, so the only way to score well is to learn which voice is the user.</li>
+      <li><strong>Small and causal.</strong> 40-band log-mel, two causal convolutions, a two-layer GRU, one sigmoid. 83,393 parameters, no look-ahead.</li>
+      <li><strong>One CPU, one night.</strong> 20,000 steps of 128 clips, AdamW with cosine decay, weight averaging, boundary frames down-weighted. 9.7 hours on a six-core laptop CPU.</li>
+      <li><strong>Checked against humans.</strong> TEN VAD's annotated recordings for accuracy, held-out speakers in unseen rooms for the two-talker test, FLEURS for seven languages, and a Rust-to-PyTorch parity test within 1e-4.</li>
+    </ol>
+
+    <h2 id="what-we-tried-that-did-not-work">What we tried that did not work</h2>
+    <p>A second run with harder mixing and 4x loss weight on background-only frames moved the operating point and nothing else: at equal recall the false-alarm rate was identical to the decimal, and real-speech accuracy dropped 1.3 points. A third run that added ten hours each of six languages changed every number by less than 0.3 points. Both are documented in <a href="https://github.com/himanshu007-creator/auricle/blob/main/docs/RESEARCH.md">docs/RESEARCH.md</a>. The lesson: with only the mixed audio as input, a small causal model separates talkers by level, and level is ambiguous. The next model gets an enrolment embedding.</p>
+
+    <h2 id="caveats-stated-plainly">Caveats, stated plainly</h2>
+    <ul>
+      <li>On single-speaker real audio it is not better than Silero: 0.9 points below on 30 recordings, within noise. Its labels came from Silero, so on that task it can only match.</li>
+      <li>The competing-talker numbers are on generated clips from held-out speakers until a real meeting-corpus benchmark is published.</li>
+      <li>35% background false alarms is 2.3x better than Silero, not "ignores background speech".</li>
+      <li>Trained on English read speech; the six other languages are measured, not trained on.</li>
+      <li>No field numbers yet on laptop speakers, Bluetooth or phones.</li>
+    </ul>
+
+    <h2 id="use-it">Use it</h2>
+    <pre><code>import { createVad } from 'auricle';
+const vad = await createVad({ model: 'auricle', onSpeechEnd: (audio) =&gt; upload(audio) });
+await vad.start();</code></pre>
+    <p>Weights and the ONNX export: <a href="https://huggingface.co/auricle-voice/auricle-v1">huggingface.co/auricle-voice/auricle-v1</a>. Training code: <a href="https://github.com/himanshu007-creator/VAD-train">VAD-train</a>. Labels bootstrapped from <a href="https://github.com/snakers4/silero-vad">Silero VAD</a> (MIT).</p>
+
+    <h2 id="faq">Questions people ask</h2>
+    <h3>What is Auricle v1?</h3>
+    <p>An open-source voice activity detection model with 83,393 parameters: 40-band log-mel features, two causal 1-D convolutions and a two-layer GRU, scoring 16 ms hops. It is trained to detect the person in front of the microphone rather than any speech in the room.</p>
+    <h3>How was Auricle v1 trained?</h3>
+    <p>From scratch on public speech (LibriSpeech), noise, music and room impulse responses, with Silero VAD v6 providing frame labels on the clean audio. The audio the model hears is then corrupted with rooms, noise and a competing talker in 45% of clips while the clean labels are kept, so the model must learn to separate the foreground voice.</p>
+    <h3>How big is Auricle v1?</h3>
+    <p>334 KB of float32 weights, 338 KB gzipped as a WebAssembly module with the weights inside. Silero VAD v6 is about 1M parameters and 974 KB.</p>
+    <h3>Can I use Auricle v1 outside the browser?</h3>
+    <p>Yes. The weights ship as a flat float32 blob with a JSON layout and as ONNX on Hugging Face (auricle-voice/auricle-v1), and the Rust crate auricle-vad runs on any target.</p>
+  </main>
+</body>
+</html>

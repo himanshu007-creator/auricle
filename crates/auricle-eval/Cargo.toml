@@ -1,0 +1,11 @@
+[package]
+name = "auricle-eval"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+auricle-dsp = { path = "../auricle-dsp" }
+auricle-vad = { path = "../auricle-vad" }
+auricle-turn = { path = "../auricle-turn" }
+hound = "3.5"

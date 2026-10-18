@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8" /><title>Auricle browser bench</title></head>
+<body>
+<!-- Served from the repo root by browser-matrix.mjs. Everything runs after a
+     click so AudioContext can start in every browser. Results land in
+     window.__result for the Playwright runner. -->
+<button id="run">run</button>
+<pre id="out"></pre>
+<script type="module">
+const FRAME = 512;
+// Browsers coarsen performance.now() (0.1 ms Chromium, 1 ms WebKit), so a single
+// 0.05 ms frame cannot be timed. Each pass over the clip (603 frames) is timed
+// as a whole and divided; several passes give a spread.
+const PASSES = 21;
+const out = document.getElementById('out');
+const log = (s) => (out.textContent += s + '\n');
+const stats = (passMs, nFrames) => {
+  const s = [...passMs].sort((a, b) => a - b).map((t) => t / nFrames);
+  return { perFrameMin: s[0], perFrameP50: s[Math.floor(s.length / 2)], perFrameMax: s[s.length - 1] };
+};
+
+async function loadClip() {
+  const bytes = new Uint8Array(await (await fetch('/demo/public/pretend-agent.wav')).arrayBuffer());
+  const view = new DataView(bytes.buffer, 44);
+  const samples = new Float32Array((bytes.length - 44) / 2);
+  for (let i = 0; i < samples.length; i++) samples[i] = view.getInt16(i * 2, true) / 32768;
+  return Array.from({ length: Math.floor(samples.length / FRAME) }, (_, i) => samples.subarray(i * FRAME, (i + 1) * FRAME));
+}
+
+async function benchAuricle(frames) {
+  const t0 = performance.now();
+  const mod = await import('/web/src/generated/brain/auricle_brain.js');
+  await mod.default({ module_or_path: await (await fetch('/web/src/generated/brain/auricle_brain_bg.wasm')).arrayBuffer() });
+  const brain = new mod.Brain();
+  const startupMs = performance.now() - t0;
+  const passMs = [];
+  const probs = [];
+  for (let pass = 0; pass < PASSES; pass++) {
+    brain.reset();
+    const t = performance.now();
+    for (const f of frames) {
+      const p = brain.process(f);
+      brain.take_events();
+      if (pass === 0) probs.push(p);
+    }
+    if (pass > 0) passMs.push(performance.now() - t);
+  }
+  return { startupMs, probs, ...stats(passMs, frames.length) };
+}
+
+async function benchOrt(frames) {
+  const t0 = performance.now();
+  const ort = await import('/bench/node_modules/onnxruntime-web/dist/ort.wasm.min.mjs');
+  ort.env.wasm.numThreads = 1;
+  ort.env.wasm.wasmPaths = '/bench/node_modules/onnxruntime-web/dist/';
+  const session = await ort.InferenceSession.create('/bench/node_modules/@ricky0123/vad-web/dist/silero_vad_v6.onnx', { executionProviders: ['wasm'] });
+  const startupMs = performance.now() - t0;
+  const sr = new ort.Tensor('int64', [16000n]);
+  const passMs = [];
+  const probs = [];
+  for (let pass = 0; pass < PASSES; pass++) {
+    let state = new ort.Tensor('float32', new Float32Array(256), [2, 1, 128]);
+    let context = new Float32Array(64);
+    const t = performance.now();
+    for (const f of frames) {
+      const withContext = new Float32Array(64 + FRAME);
+      withContext.set(context, 0);
+      withContext.set(f, 64);
+      context = f.slice(-64);
+      const res = await session.run({ input: new ort.Tensor('float32', withContext, [1, withContext.length]), state, sr });
+      state = res.stateN;
+      if (pass === 0) probs.push(res.output.data[0]);
+    }
+    if (pass > 0) passMs.push(performance.now() - t);
+  }
+  return { startupMs, probs, ...stats(passMs, frames.length) };
+}
+
+/** Registers both Rust worklets, plays half a second through the playback one and checks the Rust ring reports it. */
+async function testWorklets() {
+  const ctx = new AudioContext();
+  await ctx.resume();
+  const module = await WebAssembly.compile(await (await fetch('/target/wasm32-unknown-unknown/release/auricle_worklet.wasm.opt')).arrayBuffer());
+  const blobUrl = async (path) => URL.createObjectURL(new Blob([await (await fetch(path)).text()], { type: 'text/javascript' }));
+  await ctx.audioWorklet.addModule(await blobUrl('/web/src/worklets/capture.worklet.js'));
+  await ctx.audioWorklet.addModule(await blobUrl('/web/src/worklets/playback.worklet.js'));
+  const capture = new AudioWorkletNode(ctx, 'auricle-capture', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], processorOptions: { module } });
+  const playback = new AudioWorkletNode(ctx, 'auricle-playback', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1], processorOptions: { module, inputRate: 24000, capacitySeconds: 10 } });
+  const silent = ctx.createGain();
+  silent.gain.value = 0;
+  capture.connect(silent).connect(ctx.destination);
+  playback.connect(silent);
+  const messages = [];
+  playback.port.onmessage = (e) => messages.push(e.data);
+  const chunk = new Float32Array(12000).fill(0.1);
+  playback.port.postMessage({ type: 'chunk', samples: chunk, rate: 24000 }, [chunk.buffer]);
+  await new Promise((r) => setTimeout(r, 1200));
+  await ctx.close();
+  return { contextRate: ctx.sampleRate, state: ctx.state, playingMessages: messages.filter((m) => m.type === 'playing').map((m) => m.value) };
+}
+
+document.getElementById('run').onclick = async () => {
+  const result = { ua: navigator.userAgent };
+  try {
+    const frames = await loadClip();
+    result.auricle = await benchAuricle(frames);
+    log(`auricle per frame ${result.auricle.perFrameP50.toFixed(4)} ms`);
+    result.ort = await benchOrt(frames);
+    log(`ort per frame ${result.ort.perFrameP50.toFixed(4)} ms`);
+    let maxDiff = 0;
+    for (let i = 0; i < frames.length; i++) maxDiff = Math.max(maxDiff, Math.abs(result.auricle.probs[i] - result.ort.probs[i]));
+    result.parity = maxDiff;
+    delete result.auricle.probs;
+    delete result.ort.probs;
+  } catch (err) {
+    result.benchError = String(err);
+  }
+  try {
+    result.worklets = await testWorklets();
+    log(`worklets ok, playing messages ${JSON.stringify(result.worklets.playingMessages)}`);
+  } catch (err) {
+    result.workletError = String(err);
+  }
+  window.__result = result;
+};
+</script>
+</body>
+</html>

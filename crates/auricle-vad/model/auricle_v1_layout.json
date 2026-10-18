@@ -1,0 +1,121 @@
+{
+ "sample_rate": 16000,
+ "window": 512,
+ "hop": 256,
+ "n_mels": 40,
+ "model": {
+  "n_mels": 40,
+  "conv_channels": 64,
+  "conv_kernel": 5,
+  "gru_hidden": 64,
+  "gru_layers": 2
+ },
+ "gru_gate_order": "r, z, n (PyTorch)",
+ "tensors": [
+  {
+   "name": "mean",
+   "shape": [
+    40
+   ]
+  },
+  {
+   "name": "std",
+   "shape": [
+    40
+   ]
+  },
+  {
+   "name": "conv1.conv.weight",
+   "shape": [
+    64,
+    40,
+    5
+   ]
+  },
+  {
+   "name": "conv1.conv.bias",
+   "shape": [
+    64
+   ]
+  },
+  {
+   "name": "conv2.conv.weight",
+   "shape": [
+    64,
+    64,
+    5
+   ]
+  },
+  {
+   "name": "conv2.conv.bias",
+   "shape": [
+    64
+   ]
+  },
+  {
+   "name": "gru.weight_ih_l0",
+   "shape": [
+    192,
+    64
+   ]
+  },
+  {
+   "name": "gru.weight_ih_l1",
+   "shape": [
+    192,
+    64
+   ]
+  },
+  {
+   "name": "gru.weight_hh_l0",
+   "shape": [
+    192,
+    64
+   ]
+  },
+  {
+   "name": "gru.weight_hh_l1",
+   "shape": [
+    192,
+    64
+   ]
+  },
+  {
+   "name": "gru.bias_ih_l0",
+   "shape": [
+    192
+   ]
+  },
+  {
+   "name": "gru.bias_ih_l1",
+   "shape": [
+    192
+   ]
+  },
+  {
+   "name": "gru.bias_hh_l0",
+   "shape": [
+    192
+   ]
+  },
+  {
+   "name": "gru.bias_hh_l1",
+   "shape": [
+    192
+   ]
+  },
+  {
+   "name": "out.weight",
+   "shape": [
+    1,
+    64
+   ]
+  },
+  {
+   "name": "out.bias",
+   "shape": [
+    1
+   ]
+  }
+ ]
+}

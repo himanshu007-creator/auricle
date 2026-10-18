@@ -1,0 +1,52 @@
+name: Release
+
+# Tag v0.1.0 -> publish `auricle` and `auricle-react` to npm with provenance and
+# attach the built library files to the GitHub release, so the CDN links
+# (jsDelivr, unpkg) and the release assets both work. Needs NPM_TOKEN.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Install wasm-bindgen (must match the crate version) and binaryen
+        run: |
+          cargo install wasm-bindgen-cli --version 0.2.129 --locked
+          curl -sL https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-linux.tar.gz | tar xz
+          echo "$PWD/binaryen-version_123/bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: cargo test --workspace --release --all-features
+      - run: ./scripts/build-wasm.sh
+      - run: npm ci
+      - run: npm test -w web && npm run build -w web
+      - run: npm test -w react && npm run build -w react
+      - run: npm publish -w web --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish -w react --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Attach library files to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            web/dist/auricle.js
+            web/dist/auricle.iife.js
+            web/dist/compat.js
+            react/dist/auricle-react.js
+          generate_release_notes: true

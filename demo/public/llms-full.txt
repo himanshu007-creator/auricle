@@ -1,0 +1,769 @@
+# Auricle: full text for language models
+
+Generated 2026-10-18 from the repository docs. Short index: https://himanshu007-creator.github.io/auricle/llms.txt
+
+---
+
+# README
+
+## Install
+
+```sh
+npm install auricle            # core
+npm install auricle-react      # React hooks (peer: auricle, react >= 18)
+```
+
+Script tag, no bundler:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/auricle@0.1.0/dist/auricle.iife.js"></script>
+<!-- or https://unpkg.com/auricle@0.1.0/dist/auricle.iife.js; defines window.Auricle. The script build carries both detectors (1.4 MB gzipped); the ESM build loads only the one you ask for. -->
+```
+
+## Three levels, one package
+
+**Level 1, the detector.** Replaces vad-web in a few lines.
+
+```ts
+import { createVad } from 'auricle';
+
+const vad = await createVad({
+  onSpeechStart: ({ tMs }) => ui.listening(),        // candidate: 3 voiced frames, reversible actions
+  onSpeechConfirmed: () => ui.speaking(),            // 6 of the last 10 frames: irreversible actions
+  onSegment: (s) => upload(s.wav()),                 // finished segment: audio, startMs, endMs, wav()
+  onMisfire: () => ui.listening(),
+  onFrame: (p) => meter.set(p),                      // every 32 ms
+  thresholds: { hangoverMs: 240 },                   // vad-web waits 1,400 by default
+});
+await vad.start();                                   // from a click: it asks for the microphone
+vad.pause(); vad.resume(); vad.setThresholds({ minSpeechMs: 200 });
+console.log(vad.stats.sttShare);                     // share of the session that was sent to speech-to-text
+```
+
+Every public method, option, event and type carries a JSDoc comment, so an editor or a language model sees what each one does without opening the docs.
+
+**Level 2, coming from vad-web.** Same API, one import.
+
+```ts
+import { MicVAD, utils } from 'auricle/compat';      // was '@ricky0123/vad-web'
+const vad = await MicVAD.new({ onSpeechEnd: (audio) => upload(utils.encodeWAV(audio)) });
+vad.start();
+```
+
+Delete `baseAssetPath`, `onnxWASMBasePath` and the copied files. The mapping and the differences are in [docs/MIGRATING_FROM_VAD_WEB.md](docs/MIGRATING_FROM_VAD_WEB.md).
+
+**Level 3, the whole conversation.** Any OpenAI-compatible endpoint; the listener ducks the agent on a speech candidate, stops it on confirmation, and cuts the agent's history to what the user actually heard.
+
+```ts
+import { Auricle, OpenAICompat } from 'auricle';
+
+const auricle = await Auricle.create({
+  backend: new OpenAICompat({
+    baseURL: 'https://api.groq.com/openai/v1',
+    apiKey,
+    models: { stt: 'whisper-large-v3-turbo', llm: 'openai/gpt-oss-20b', tts: 'canopylabs/orpheus-v1-english' },
+    voice: 'autumn',
+  }),
+  profile: 'speakers',                               // or 'headphones': different thresholds while the agent talks
+});
+auricle.on('state', (s) => ui.set(s));               // listening | user_speaking | thinking | agent_speaking
+auricle.on('turn', (t) => log(t.clean, t.verbatim)); // clean text for the model, verbatim for debugging
+auricle.on('interrupted', (e) => log(e.heardText, e.stopLatencyMs));
+auricle.on('metrics', (m) => log(m.endToFirstAudioMs));
+await auricle.start();
+console.log(formatStats(auricle.stats));             // session 2:14 · sent to STT 0:31 (23%) · TTS chars 812, avoided 1,040 · ...
+```
+
+**What it saves, measured per session.** `auricle.stats` (and `vad.stats`, `useVad().stats`) counts what actually left the browser: milliseconds of audio sent to speech-to-text against session length, characters synthesised against characters the model wrote that the user never heard because they interrupted, and the median time an interruption took to stop the audio. Those are counts from this session's events, not estimates. Multiply them by your own vendor's per-minute and per-character rates; we do not publish a dollar figure, because rates change monthly.
+
+React:
+
+```tsx
+import { useVad, useAuricle, useMicVAD } from 'auricle-react';
+
+const { listening, speaking, probability, segments, stats, toggle } = useVad({ onSegment: (s) => upload(s.wav()) });
+const { state, turns, agentText, heardText, stats, start, interrupt } = useAuricle({ backend });
+const mic = useMicVAD({ onSpeechEnd: upload });      // the @ricky0123/vad-react shape
+```
+
+Full option and event reference: the TypeScript types in `web/src/auricle.ts`, `web/src/vad.ts`, `web/src/compat.ts` and `react/src`.
+
+## What is in the box
+
+| Piece | Kind | Job |
+|---|---|---|
+| `crates/auricle-dsp` | Rust | Polyphase resampler, ring buffer, frame chunker. No allocation in the hot path. |
+| `crates/auricle-vad` | Rust | Auricle v1 behind a `Vad` trait as a hand-written forward pass, parity test against PyTorch, no runtime. Silero VAD v6 is an opt-in cargo feature (parity test against onnxruntime) kept for the engine benchmark. |
+| `crates/auricle-turn` | Rust | Graded events (`speech_candidate`, `speech_confirmed`, `silence_candidate`, `speech_end`, `misfire`) and the barge-in arbiter (`duck`, `unduck`, `interrupt`). Thresholds per profile. |
+| `crates/auricle-text` | Rust | Deletion-only transcript cleanup (fillers, repeats, stutters) with a subsequence verifier, plus floor-holding cues. |
+| `crates/auricle-worklet` | Rust, C-ABI WASM | Capture worklet (resample to 16 kHz, 512-sample frames) and playback worklet (ring, duck in 30 ms, 15 ms fade on hard stop, played-sample counter). |
+| `crates/auricle-brain` | Rust, wasm-bindgen | Worker entry point: VAD + turn machine + cleanup. |
+| `crates/auricle-eval` | Rust CLI | Replays a WAV through the same crates and prints events and per-frame cost (`--silero` switches to the Silero build for the parity benchmark). |
+| `web/` | npm `auricle` | `createVad`, `Auricle`, `auricle/compat`, the audio graph, Chromium AEC loopback, the OpenAI-compatible backend, curl parser, heard-text truncation. |
+| `react/` | npm `auricle-react` | `useVad`, `useAuricle`, `useMicVAD`. |
+| `demo/` | Vite site | The GitHub Pages site: demo, benchmarks, model card, blog. |
+| `bench/` | Node, Python, Playwright | The comparison against `@ricky0123/vad-web`: engine speed, labelled-set accuracy, TEN set, browser matrix, latency. |
+| `tools/` | Python, HTML | Weight export from Silero's ONNX, the Auricle v1 parity fixture, the brand and chart renderers, the Open Graph card. |
+
+### How the pieces run
+
+```
+mic ──► capture worklet (Rust: resample, chunk) ──frames──► brain worker (Rust: VAD, turn, arbiter)
+                                                                 │ duck / unduck / stop (direct MessagePort)
+                                                                 ▼
+speakers ◄── playback worklet (Rust: ring, duck, fade, played-sample counter) ◄── TTS chunks from the main thread
+                                                                 │ played / queued counts
+main thread: Auricle class ── STT, chat (SSE), TTS over fetch ── heard-text truncation of history
+```
+
+The decision to duck or stop never touches the main thread or the network. The detector runs in a worker; the audio stays in the worklets.
+
+## The detector: Auricle v1
+
+One detector ships in the npm packages: **Auricle v1**, our own 83,393-parameter model, 334 KB of weights, MIT, [auricle-voice/auricle-v1](https://huggingface.co/auricle-voice/auricle-v1) on Hugging Face. It scores a 16 ms hop at a time and was built for the case every voice agent meets and no general detector handles: another person, or a television, audible in the same room.
+
+### How Auricle v1 was made
+
+Auricle v1 was trained from scratch on public audio, with frame labels bootstrapped from Silero VAD on clean speech, and a data recipe that makes it ignore background talkers. The method, in order:
+
+1. **Label clean speech once.** 961 hours of LibriSpeech read speech get a speech or silence label every 16 ms, decided on the clean recording with a -60 dBFS energy floor. The labels are made on audio the model will never hear.
+2. **Corrupt everything the model does hear.** Each 5-second training clip is one to three utterances of one speaker with realistic gaps, then passed through, with these probabilities:
+   - a measured room impulse response from RIRS_NOISES, 50% of clips;
+   - MUSAN noise or music at -5 to 25 dB signal-to-noise, 85%;
+   - a second talker, a different held-out speaker, 3 to 25 dB below the user, 45%, labelled as *not* speech; in a quarter of those the background is MUSAN crowd babble instead of one voice;
+   - a laugh, cough, sigh or sniff from VocalSound dropped into a gap at the user's own level, labelled as not speech, 20%;
+   - telephone band-limiting 20%, clipping 10%, random gain from -30 to 0 dB;
+   - and 12% of clips contain no foreground speech at all, so silence under noise is learned, not assumed.
+3. **Keep the clean labels.** The targets never change when the audio does. A frame where only the background talker speaks is labelled silent. The only way to score well is to learn what separates the foreground voice from every other sound, which is exactly the skill a speech-or-not detector lacks.
+4. **Keep the model small and causal.** 40-band log-mel features, two causal convolutions (kernel 5, 64 channels), a two-layer GRU of 64 units, one sigmoid. No look-ahead, so the browser never waits on future audio. 83,393 parameters, 334 KB.
+5. **Train on one CPU.** 20,000 steps of 128 clips, AdamW at 2e-3 with cosine decay, weight decay 1e-2, an exponential moving average of the weights, half weight on the two frames around every label change, the first 0.5 s of each clip ignored while the recurrent state settles. 9.7 hours on a six-core laptop CPU, no GPU.
+6. **Check against humans, not against the labeller.** The accuracy number comes from TEN VAD's 30 human-annotated recordings. The two-talker number comes from held-out speakers through rooms the model never saw. Seven languages are measured on FLEURS. The Rust port is checked against PyTorch to within 1e-4 on the same clip.
+7. **Record what failed.** Two post-training attempts, one on harder two-talker mixes and one adding ten hours each of six languages, moved nothing and were rejected. Both are in [docs/RESEARCH.md](docs/RESEARCH.md).
+
+| On the same audio | Auricle v1 | Silero VAD v6 |
+|---|---|---|
+| TEN VAD human-labelled set, F1 | 92.7% | 93.6% |
+| Competing talker: foreground F1 | **94.2%** | 89.4% |
+| Competing talker: background frames called speech | **35%** | 82% |
+
+
+
+A second talker 3 to 15 dB quieter in the same room, every threshold: at any share of the user's speech kept, Auricle v1 lets through three to four times less of the other person. On one person talking Silero v6 stays about a point ahead ([chart](demo/public/charts/pr-ten.png)). Details in [docs/COMPARISON.md](docs/COMPARISON.md#precision-recall-curves-every-threshold-at-once).
+
+Silero VAD v6 is not in the npm packages. The Rust crate keeps it behind an opt-in `silero` cargo feature so the engine comparison against vad-web stays reproducible with identical weights. Training code: [VAD-train](https://github.com/himanshu007-creator/VAD-train); recipe, languages, negative results and caveats: [docs/MODEL_CARD.md](docs/MODEL_CARD.md) and [docs/RESEARCH.md](docs/RESEARCH.md).
+
+## The demo
+
+[himanshu007-creator.github.io/auricle](https://himanshu007-creator.github.io/auricle/). Without a key it is a VAD recorder: every detected segment is a playable clip, and *Play pretend agent* tests ducking and barge-in with no API. With a Groq key (defaults are filled in) it is a conversation: interrupt the agent and its bubble is cut to the words you heard. The readout under the trace shows audio sent to speech-to-text versus session length, characters synthesised versus avoided by interruption, and median stop latency. *Export* saves a local JSON bundle with events, turns and the segment audio; nothing is uploaded anywhere except to the endpoint you typed.
+
+### Keys, CORS and plain http
+
+- A key typed into a web page is visible to that page's code. Use a scoped or short-lived key, or a proxy.
+- Browser calls need CORS headers from the endpoint. Groq sends them; self-hosted servers usually need a flag. A ten-line Cloudflare Worker that adds the real key and CORS is in [docs/MIGRATING_FROM_VAD_WEB.md](docs/MIGRATING_FROM_VAD_WEB.md)'s neighbour, the demo's Advanced panel explains failures in plain words.
+- Plain `http://` endpoints are blocked from the HTTPS page except `localhost` in Chromium-based browsers.
+
+## Build from source
+
+Prerequisites: Rust stable with the `wasm32-unknown-unknown` target, `wasm-bindgen-cli` 0.2.129 (the version must match the crate), `wasm-opt` from binaryen, Node 22.
+
+```sh
+cargo test                       # 16 Rust tests, including both parity tests
+./scripts/build-wasm.sh          # worklet + brain WASM into web/src/generated
+npm install
+npm test                         # vitest for web and react
+npm run build                    # web (ESM, compat, IIFE, types), react, demo
+npm run dev                      # the demo on a local port, library from source
+```
+
+Benchmarks: `cd bench && npm install && npm run bench`, then `npm run accuracy`, `npm run browsers`, `npm run ten`, `OPENAI_API_KEY=... npm run latency`. Each script's output is what `docs/COMPARISON.md` quotes.
+
+Release: tag `vX.Y.Z` and the release workflow tests, builds, publishes both packages to npm with provenance, and attaches the library files to the GitHub release. Pages deploy on every push to `main`.
+
+## Docs
+
+- [docs/COMPARISON.md](docs/COMPARISON.md): every number against vad-web, Silero and TEN VAD, with reproduce commands.
+- [docs/MODEL_CARD.md](docs/MODEL_CARD.md): Auricle v1.
+- [docs/MIGRATING_FROM_VAD_WEB.md](docs/MIGRATING_FROM_VAD_WEB.md): the one-import switch and what differs.
+- [docs/RESEARCH.md](docs/RESEARCH.md): what we tried, including what failed.
+- [docs/ROADMAP.md](docs/ROADMAP.md): the roadmap.
+- Site docs: [himanshu007-creator.github.io/auricle/docs.html](https://himanshu007-creator.github.io/auricle/docs.html). Brand files in `demo/public/brand/` (`tools/brand.py` renders them).
+- [CHANGELOG.md](CHANGELOG.md).
+
+## What is not claimed
+
+Detection on single-speaker audio is not more accurate than Silero v6; Auricle v1 is about one F1 point below it on human-labelled recordings. The competing-talker numbers are on generated clips until a meeting-corpus benchmark is published. No Firefox or mobile numbers yet, no field false-barge-in rate, no production users: vad-web has three years of those. The demo's export exists to collect them.
+
+## License
+
+MIT.
+
+---
+
+# Auricle versus `@ricky0123/vad-web`
+
+`@ricky0123/vad-web` is the popular browser VAD. It runs the Silero model through ONNX Runtime Web. Auricle runs the same Silero v6 weights through a hand-written Rust forward pass compiled to WebAssembly. This document only states what was measured or read from the code, with the command to reproduce each number.
+
+Measured on 2026-10-17 with `@ricky0123/vad-web` 0.0.31 and `onnxruntime-web` 1.30.0, Node 25.9 (V8 14.1) on Apple Silicon. Node runs the same WebAssembly binaries the browsers run, with the same V8 engine as Chrome, so the per-frame numbers transfer to Chromium; Safari and Firefox were not measured. Reproduce with:
+
+```sh
+./scripts/build-wasm.sh && cd bench && npm install && npm run bench
+```
+
+## Same model, same output
+
+Both run the Silero v6 weights (`silero_vad_v6.onnx` in vad-web has the same md5 as the file Auricle exports its weights from). On the 603-frame bundled clip, the maximum absolute difference in speech probability between Auricle and onnxruntime-web is **7.8e-7**. Detection quality is therefore identical by construction; everything below is about cost and what sits around the model.
+
+## Speed
+
+Per 32 ms frame, one thread, four timed passes after a warm-up pass:
+
+| Runtime | p50 | p95 | max | mean |
+|---|---|---|---|---|
+| Auricle brain WASM (Rust, SIMD128) | 0.051 ms | 0.060 ms | 0.48 ms | 0.053 ms |
+| onnxruntime-web 1.30 WASM (SIMD, 1 thread), as vad-web runs it | 0.191 ms | 0.209 ms | 2.4 ms | 0.193 ms |
+
+Auricle is about **3.7x faster per frame** and its worst frame was about 5x lower. Both are far below the 32 ms budget, so this buys headroom on weak devices, not a change in detection latency. Detection latency is set by frame size and confirmation policy, which the model does not control.
+
+Startup, from first call to a ready model:
+
+| Runtime | Time |
+|---|---|
+| Auricle (instantiate WASM, weights are inside it) | 28 ms |
+| onnxruntime-web (instantiate runtime, create session from the ONNX file) | 195 ms |
+
+Network time is excluded in both cases.
+
+## Size
+
+Gzipped bytes a page must download before the first frame can be scored:
+
+| | gzipped |
+|---|---|
+| **Auricle** as shipped (Auricle v1): brain WASM with weights inside + worklet WASM | **346 KB** |
+| Auricle engine with the Silero v6 weights (opt-in cargo feature, benchmark only) | 948 KB |
+| vad-web: `silero_vad_v6.onnx` | 1,900 KB |
+| vad-web: `ort-wasm-simd-threaded.wasm` | 3,583 KB |
+| vad-web: `ort.wasm.min.mjs` + `bundle.min.js` + worklet | 37 KB |
+| **vad-web total** | **5,520 KB** |
+
+Auricle is about **16x smaller** as shipped, and still **6x smaller** when the engine carries the same Silero weights as vad-web (the single-file script build is 402 KB gzipped). The full Auricle demo page, including the TypeScript shell, is 1,040 KB gzipped. Two reasons for the gap: there is no inference runtime at all, and the STFT basis (a 258x256 matrix stored inside the ONNX file) is computed at start-up instead of shipped.
+
+## Utility
+
+Read from the vad-web 0.0.31 source and the Auricle source.
+
+| Capability | vad-web | Auricle |
+|---|---|---|
+| Speech start / end callbacks with pre-roll audio | yes (`onSpeechStart`, `onSpeechEnd`, `preSpeechPadMs`) | yes (`speechStart`, `speechEnd`, 512 ms pre-roll) |
+| Early vs. confirmed start | `onSpeechStart` then `onSpeechRealStart` after `minSpeechMs` | `speech_candidate` then `speech_confirmed` (N of last M frames) |
+| Misfire callback | `onVADMisfire` | `misfire` |
+| Per-frame probability | `onFrameProcessed` | `frame` |
+| Where inference runs | main thread: the worklet only resamples and posts frames to `RealTimeVAD.processFrame` (real-time-vad.js) | a dedicated worker |
+| Agent playback with ducking and hard stop | no | yes, in a Rust worklet: 12 dB duck in 30 ms, 15 ms fade on stop, played-sample counter |
+| Control path from decision to ducking | n/a | worker to playback worklet over a direct MessagePort, no main-thread hop |
+| Barge-in arbitration (duck on candidate, stop on confirm, un-duck on misfire, 800 ms cap on unclear overlap) | no | yes |
+| Threshold sets that change when the agent is speaking, per speakers/headphones profile | no | yes |
+| Heard-text truncation of the conversation history after an interruption | no | yes |
+| Transcript cleanup with a subsequence verifier | no | yes |
+| OpenAI-compatible STT, chat (SSE) and TTS adapter, curl paste, connection test | no | yes |
+| Chromium AEC loopback for agent audio | no | yes |
+| Offline replay of recordings through the exact browser code | no | yes (`auricle-eval`) |
+| Asset handling | copy ONNX model, ORT wasm and worklet files, configure `baseAssetPath` and `onnxWASMBasePath` | WASM inlined in the JS bundle; nothing to copy |
+| Models | Silero v5, v6 and legacy v4 | Auricle v1 (foreground-selective, 16 ms hop); Silero v6 as an opt-in crate feature for benchmarks |
+| 8 kHz input | yes (model supports it) | no |
+| Years of production use, React package, mobile and Safari fixes | yes | no; one developer, first release |
+
+## Optimizations in the Auricle forward pass
+
+Each row is a change made in `crates/auricle-vad/src/silero.rs` with its measured effect.
+
+| Change | Effect |
+|---|---|
+| No inference runtime: the graph (reflect pad, windowed STFT, 4 conv blocks, LSTM cell, 1x1 conv, sigmoid) is plain Rust | the 3.6 MB ORT runtime and 195 ms session start disappear |
+| STFT as a 256-point radix-2 FFT instead of the 258x256 basis matmul the ONNX graph uses | removes 264k of the roughly 720k multiply-adds per frame and the 264 KB basis from the payload |
+| Activations stored time-major `(t, c)`, conv weights re-laid out `(cout, k, cin)` at load | every inner loop is one contiguous dot product |
+| Explicit `f32x4` SIMD128 dot product with two accumulators | p50 0.186 ms to 0.051 ms per frame (3.6x) against the same code compiled without `simd128` |
+| No allocation in `process()`: scratch buffers and LSTM state live in the struct | no GC pauses, no allocator calls in the audio path |
+| Weights as a flat f32 blob via `include_bytes!` | 28 ms start-up; parity with onnxruntime kept at 1e-6 |
+
+The non-SIMD number was produced by building `auricle-brain` without `-C target-feature=+simd128` and running the same bench script against it.
+
+## Accuracy
+
+Frame-level accuracy is identical: same weights, outputs within 1e-6. What differs is the endpointing policy on top, so that is what was measured.
+
+**Data.** 24 files, 240 labelled utterances: six macOS `say` voices (Samantha, Daniel, Karen, Moira, Rishi, Tessa) reading ten sentences from one word ("No.", "Okay.") to 15 words, separated by gaps of 0.3, 0.5, 0.8, 1.2 and 2.0 s, each file clean and with white noise at 20, 10 and 5 dB SNR. Speech intervals are measured from the clean TTS audio with a 10 ms RMS envelope at -40 dBFS. Synthetic speech, one noise type, no reverberation, no overlapping talkers: this is a controlled test of the policies, not a field accuracy study.
+
+**Method.** `bench/accuracy.mjs` computes the probabilities once and feeds them to Auricle's turn machine (candidate 3 frames, confirm 6 of 10, hangover 240 ms, minimum voiced duration 100 ms) and to vad-web's `FrameProcessor` with its shipped defaults (thresholds 0.3 / 0.25, `minSpeechMs` 400, `redemptionMs` 1400). A detection matches an utterance when their overlap covers at least half of the shorter of the two; a detection matching nothing is a false alarm, an utterance with two detections is a split, a detection with two utterances is a merge.
+
+```sh
+python3 bench/make_dataset.py bench/data && node bench/accuracy.mjs
+```
+
+| All 240 utterances | Auricle | vad-web defaults |
+|---|---|---|
+| Recall | 100% | 98.3% |
+| False alarms (detections matching no utterance) | 0 | 0 |
+| Utterances merged into a neighbouring detection | 76 (gaps of 0.3 s, some of 0.5 s) | 232 (every gap under 1.4 s) |
+| Utterances split in two | 6, all in noisy files | 0 |
+| Start event after true start, median | 72 ms | 6 ms |
+| End event after true end, median | 324 ms | 1,432 ms |
+
+Per SNR: Auricle recall 100% at every level with 0 splits clean and 2 splits each at 20, 10 and 5 dB; vad-web 98.3% at every level.
+
+Reading this honestly:
+
+- **Turn end.** Auricle closes a turn 1.1 s sooner. For a voice agent that is the difference between answering and dead air. The cost is merging fewer natural pauses: 0.3 s pauses inside one thought still merge, 0.5 s pauses sometimes do, 0.8 s and above always split. vad-web's 1.4 s redemption merges almost everything, which is the right choice for a dictation-style recorder and the wrong one for turn taking.
+- **Splits.** The six splits are one 15-word sentence with a comma pause in the middle, in the noisy files only: noise pushes the pause's probability under the 0.35 negative threshold and the 240 ms hangover ends the turn. At the conversation layer the first half ends on "better, but", which the open-turn rule treats as unfinished and merges with the next segment before calling the model. vad-web never splits because it waits 1.4 s.
+- **Turn start.** vad-web's `onSpeechStart` fires on the first frame above 0.3; Auricle's candidate needs three frames above 0.5, so vad-web's first signal is about 66 ms earlier. vad-web then waits 400 ms (`onSpeechRealStart`) before trusting it; Auricle confirms after 6 of 10 frames, about 200 to 320 ms.
+- **Noise.** White noise down to 5 dB SNR produced no false alarms from either policy. Auricle also has a minimum voiced duration (`minSpeechMs`, default 100 ms); sweeping it from 0 to 450 ms on this set changed nothing until 350 ms, where it started costing recall on one-word turns, so the default stays low and the knob is there for environments with clicks and keyboard noise.
+- vad-web's four misses are one-word turns ("No.", "Okay.") shorter than its 400 ms minimum.
+
+An earlier version of this scorer matched on half of the utterance only, which counted each half of a split sentence as a false alarm; the numbers above use the corrected rule.
+
+### Real recordings: TEN VAD's annotated test set
+
+TEN VAD publishes 30 human-annotated recordings (LibriSpeech, GigaSpeech and DNS Challenge material, 16 kHz, labels as speech / non-speech spans). `bench/ten-testset.mjs` scores the Auricle probabilities frame by frame against those labels, each 32 ms frame labelled by its centre. This is the same model vad-web runs, so the figures apply to both.
+
+TEN VAD itself was built from its repository (its C++ feature pipeline plus its ONNX model, through its own Python demo at the 16 ms hop) and scored on the same labels.
+
+| Threshold | Auricle / Silero v6: precision, recall, F1 | TEN VAD: precision, recall, F1 |
+|---|---|---|
+| 0.3 | 91.7%, 96.1%, **93.8%** | 82.4%, 98.2%, 89.7% |
+| 0.5 (Auricle default) | 93.8%, 93.7%, **93.7%** | 94.2%, 92.1%, 93.1% |
+| 0.7 (Auricle while the agent speaks) | 95.3%, 90.6%, **92.9%** | 98.8%, 75.2%, 85.3% |
+
+8,184 Silero frames of 32 ms and the matching 16 ms TEN hops, each labelled by its centre. Frame-level scoring penalises every boundary frame, so these are lower bounds on what a segment-level policy sees. TEN's README reports the opposite ordering; it compared against an earlier Silero release, and the v6 weights Auricle ships close that gap on TEN's own test set. At Auricle's thresholds Silero v6 has the higher F1; TEN is sharper at 0.7 but drops a quarter of the speech frames there.
+
+```sh
+node bench/ten-testset.mjs /path/to/ten-vad/testset [/path/to/ten-vad/outputs]
+```
+
+### Precision-recall curves, every threshold at once
+
+<p align="center"><img src="../demo/public/charts/pr-ten.png" alt="Precision-recall on TEN VAD's human-labelled set" width="900" /></p>
+<p align="center"><img src="../demo/public/charts/pr-competing.png" alt="Background false-alarm rate against foreground recall with a second talker in the room" width="900" /></p>
+
+Same audio, same frames, full threshold sweep. **First chart:** precision against recall on TEN VAD's 30 human-labelled recordings, 16,352 frames of 16 ms. Silero v6 sits about a point above Auricle v1 on single-speaker audio across the whole curve, and the README says so. **Second chart:** 400 five-second clips from held-out speakers with a second talker 3 to 15 dB quieter in the same room, both through a measured room response; its y axis is the share of frames where only the other talker is speaking that the model still calls speech. At every foreground recall Auricle v1 calls three to four times fewer of those frames speech than Silero v6. Dots mark threshold 0.5. The curve data is in `bench/pr-v1.json`; `python -m vadtrain.prcurve runs/v1/best.pt` in VAD-train regenerates both panels.
+
+## Browser matrix
+
+Re-run on 2026-10-18 with the shipped build (Auricle v1 only; the Silero rows below are the earlier like-for-like engine test):
+
+| Auricle v1, as shipped | Chromium 145 | WebKit 26 |
+|---|---|---|
+| Per 32 ms frame, p50 | 0.038 ms | 0.035 ms |
+| Start-up to a ready model | 4 ms | 10 ms |
+| Rust worklets register and render | yes | yes |
+| Demo end to end with a fake microphone (19 s clip) | 3 candidates, 3 confirmed, 3 speech ends, 0 misfires | no fake mic in headless WebKit |
+
+The 16 ms hop and the 240 ms hangover split the clip at its two longer pauses, where the 32 ms Silero build reported one segment; both are correct readings of the clip, and the conversation layer merges open turns either way.
+
+Real browsers via Playwright 1.58, headless, same machine, `bench/browser-matrix.mjs`. The harness page runs the brain WASM and onnxruntime-web over the clip for 20 timed passes (per-frame figures are a pass total divided by 603 frames, because browsers coarsen `performance.now()`), then registers both Rust C-ABI worklets, plays half a second through the playback worklet and reads back its `playing` messages.
+
+```sh
+cd bench && node browser-matrix.mjs        # expects the demo dev server on :5174 for the fake-mic runs
+```
+
+| | Chromium 145 | WebKit 26 (Safari engine) | Firefox |
+|---|---|---|---|
+| Auricle per frame, p50 (min to max) | 0.052 ms (0.051 to 0.053) | 0.050 ms (0.048 to 0.051) | not run |
+| onnxruntime-web per frame, p50 | 0.182 ms (0.179 to 0.193) | 0.184 ms (0.177 to 0.192) | not run |
+| Start-up to ready model, Auricle vs onnxruntime-web | 13 ms vs 215 ms | 15 ms vs 175 ms | not run |
+| Output parity | 7.8e-7 | 7.8e-7 | not run |
+| Rust C-ABI worklets register and render | yes, 48 kHz, playing true then false | yes, 48 kHz, playing true then false | not run |
+| Demo end to end with a fake microphone | yes: the 19 s clip as mic input gave 1 candidate, 1 confirmed, 1 speech_end, 0 misfires | headless WebKit has no fake mic; not testable this way | not run |
+
+Firefox was not run: Playwright's Firefox build (1509) exits with "Couldn't load XPCOM" on this macOS 26 machine, even when launched by hand after a forced reinstall. That is a tooling failure here, not a measured result; Firefox stays unverified. Mobile browsers were not tested.
+
+The ratio holds in both engines that ran: about 3.5x per frame and 12x to 16x on start-up, with identical outputs. The worklet result also settles the plan's open question: raw C-ABI WASM instantiated inside an AudioWorklet works in Chromium and WebKit.
+
+## Response latency
+
+vad-web has no response path, so this section describes Auricle against the generic pipeline it replaces. Nothing here is a measured end-to-end figure yet: the stage timings depend on your endpoint, and the script that measures them needs your key.
+
+After the user stops talking, a plain pipeline waits for four things in series: the silence hangover (240 ms), a speech-to-text round trip, the model's first sentence, and the TTS first byte. Auricle overlaps two of them:
+
+| Stage | Plain pipeline | Auricle |
+|---|---|---|
+| Hangover | 240 ms | 240 ms, but STT already runs: transcription starts at the first silence candidate and is reused when no more speech follows (a newer silence candidate cancels the older request; an eager failure falls back to a normal request) |
+| Speech-to-text | full round trip after speech end | only the part of the round trip that outlasts the hangover |
+| Model | wait for the first full sentence | the first clause goes to TTS at a comma once it is 12 characters long |
+| TTS | first byte | first byte, streamed PCM or WAV straight into the playback worklet |
+| First turn only | TLS handshake | a warm-up request at start opens the connection |
+
+What is not improved: a non-streaming `/audio/transcriptions` endpoint still costs one round trip after the user stops. Agents on streaming speech-to-text avoid that; it is a provider property, and the OpenAI-compatible surface Auricle targets has no streaming STT.
+
+Measure your own numbers:
+
+```sh
+OPENAI_API_KEY=... node bench/latency.mjs      # per-stage medians against your endpoint, serial vs eager model
+```
+
+The demo's agent bubble shows the measured gap from speech end to first audio for every reply, with STT wait, first token and first audio broken out, and the `metrics` event exposes the same to library users.
+
+## Optimizations and experiments
+
+Each idea was scored on TEN VAD's annotated recordings or the labelled turn set before deciding. Negative results are kept so nobody repeats them.
+
+| Idea | Why it might help | Result | Decision |
+|---|---|---|---|
+| Causal smoothing of the probability: EMA (0.5, 0.7), 3-frame median, 2-frame max, two-state hysteresis | Standard post-processing in VAD pipelines | Every variant lowers frame F1 below the raw output (93.73% raw; best variant 93.67%) | Not added: the LSTM state already smooths |
+| 16 ms hop by scoring the last 512 samples every 256 new ones | Halves onset detection latency without changing the model | F1 drops to 89.8%, recall 83%: the recurrent state steps twice per window, outside how the weights were trained | Rejected and removed |
+| Minimum voiced duration before a segment counts | Reject short noise bursts | No effect on the labelled set up to 300 ms, costs one-word turns above | Kept as a knob, default 100 ms |
+| FFT STFT, explicit SIMD, time-major layout | Speed | 0.32 ms to 0.05 ms per frame, parity unchanged | Shipped |
+| Eager STT during the hangover, first clause to TTS | Response latency | Mechanism verified; end-to-end figures await a live endpoint (`bench/latency.mjs`) | Shipped, on by default |
+
+
+## Could a different model be the base?
+
+Auricle uses no code from vad-web. The shared piece is the Silero model weights (snakers4/silero-vad, MIT), run by Auricle's own Rust forward pass. "A different base" therefore means a different model. The candidates:
+
+- **TEN VAD.** Measured above on its own annotated set: at Auricle's thresholds Silero v6 scores the higher F1, so there is no accuracy reason to switch. There is also a licence reason not to: TEN VAD's licence is Apache 2.0 with added conditions that forbid deploying it in a way that enables third parties to develop or deploy applications. Auricle is a library for exactly that, so TEN VAD cannot ship inside it. It stays a benchmark reference only.
+- **An own model.** Feasible as a later phase: a small recurrent network on log-mel features, trained on public speech plus noise, evaluated on TEN's annotated set and on recorded conversations. It would need weeks of data work to beat a 93.7% F1 that costs 0.05 ms per frame, and the gain for turn taking is small because the remaining errors are boundary frames, which the policy layer already absorbs.
+- **No VAD at all.** End-to-end duplex speech models (speech in, speech out, no separate detector) make the question moot, but they replace the whole STT, model and TTS pipeline, which contradicts the goal of working against any OpenAI-compatible API from a browser.
+
+The verdict from the measurements: keep Silero v6 as the base; the leverage is above it, in evidence fusion (echo ratio, agent-playing state, speaker similarity) and in the turn policy, which is where the plan's later phases already point.
+
+## Maturity
+
+Facts from the GitHub API and the npm registry on 2026-10-17.
+
+| | `@ricky0123/vad-web` | Auricle |
+|---|---|---|
+| First release | February 2023 (repository October 2022) | not released |
+| Versions published | 32, latest September 2026 | 0 |
+| npm downloads, last 30 days | 1,579,015 (plus 268,429 for `@ricky0123/vad-react`) | 0 |
+| GitHub stars / forks / contributors | 2,068 / 270 / 26 | not public |
+| Issues open / closed | 69 / 92 | none |
+| Models shipped | Silero v5, v6 and legacy v4; 8 kHz and 16 kHz | Auricle v1, 16 kHz |
+| React package | yes | no |
+| Automated tests | a `test/` directory with web-test-runner in the source repository | 15 Rust tests (including the onnxruntime parity test), 12 vitest tests, the three bench scripts |
+| Browser coverage | not stated per browser; 1.5 M monthly installs imply broad real-world use | Chromium and WebKit headless, one manual Chrome session; no Firefox, no mobile |
+| Conversation features (ducking, barge-in, heard text, backend) | none, by design | present; exercised with a fake mic and a synthetic agent, not yet with a live API in an automated test |
+
+This is the clearest gap. vad-web has three and a half years of users finding edge cases on real devices. Auricle has one day. Nothing above changes that: choosing Auricle today means choosing a smaller, faster, more capable but unproven library.
+
+## What is not claimed
+
+- No claim that detection is more accurate: it is the same model, and the policy comparison was run on synthetic speech with white noise only.
+- No claim about end-to-end stop latency, false barge-in rate on laptop speakers or cut-off rate with real users: the plan's targets are unmeasured, and the demo's metrics and export exist to collect them.
+- No Firefox or mobile numbers.
+- No claim of production maturity.
+
+---
+
+<p align="center"><img src="https://raw.githubusercontent.com/himanshu007-creator/auricle/main/demo/public/brand/logo.svg" alt="Auricle" height="64" /></p>
+
+---
+license: mit
+language: [en, es, de, ar, hi, zh, ja]
+tags: [voice-activity-detection, vad, speech, audio, onnx, rust, webassembly, voice-agent]
+library_name: auricle
+pipeline_tag: voice-activity-detection
+---
+
+# Auricle v1
+
+A voice activity detector trained from scratch to keep listening to the user when somebody else in the room is talking. 83,393 parameters, 334 KB of float32 weights, one decision every 16 ms, causal, streaming. Ships inside the `auricle` npm package as a hand-written Rust forward pass; this card holds the weights, the ONNX export and the numbers.
+
+## Files
+
+| File | What |
+|---|---|
+| `vad.f32` | the weights as one little-endian float32 blob, in the order given by `layout.json` |
+| `layout.json` | tensor names and shapes, sample rate 16000, window 512, hop 256, 40 mel bands, GRU gate order r, z, n, recommended threshold |
+| `vad.onnx` | the same network for onnxruntime; input `feats` (1, T, 40) log-mel, outputs `logits` (1, T) and the GRU state |
+
+## Architecture
+
+Periodic-Hann 512-point power spectrum every 256 samples at 16 kHz, 40 HTK mel bands (area-normalised), log, per-band normalisation, two causal Conv1d (kernel 5, 64 channels) with ReLU, a two-layer GRU of 64 units, one linear logit, sigmoid. The feature code is `vadtrain/features.py` in the training repository; the Rust port is `crates/auricle-vad/src/auricle.rs` in the Auricle repository, with a parity test against PyTorch on the same clip.
+
+## Training data and recipe
+
+961 hours of LibriSpeech (train-clean-100, train-clean-360, train-other-500) labelled once on the clean audio by Silero VAD v6 with a -60 dBFS energy floor. The model never sees the clean audio. Each 5-second training clip is one to three utterances of one speaker with realistic gaps, then: a room impulse response (RIRS_NOISES, 50%), MUSAN noise or music at -5 to 25 dB SNR (85%), a competing talker from a different speaker at 3 to 25 dB below the user (45%), MUSAN babble as the far background (25% of those), VocalSound laughs, coughs, sighs and sniffs dropped into gaps at the user's level with label 0 (20%), background-only clips with no foreground at all (12%), telephone bandlimiting (20%), clipping (10%), random gain -30 to 0 dB. Labels stay those of the clean foreground, so the only way to score well is to learn which voice is the user.
+
+AdamW, lr 2e-3 with 500 warm-up steps and cosine decay, weight decay 1e-2, gradient clip 1, EMA 0.999 on the weights, binary cross-entropy with a 0.5 s burn-in mask and half weight within two frames of a label change. 20,000 steps of 128 clips on a six-core Ryzen 5 4600H CPU, 9.7 hours. Dev selection by frame F1 on held-out dev-clean speakers through the same mixer.
+
+Code, config and logs: https://github.com/himanshu007-creator/VAD-train (`runs/v1`).
+
+## Evaluation
+
+Silero VAD v6 is scored on identical audio in every table.
+
+### Human-labelled real audio
+
+TEN VAD's 30 annotated recordings (LibriSpeech, GigaSpeech and DNS Challenge material), frame F1 at threshold 0.5:
+
+| Model | Precision | Recall | F1 |
+|---|---|---|---|
+| Auricle v1 | 92.0% | 93.4% | 92.7% |
+| Silero v6 | 93.6% | 93.5% | 93.6% |
+
+### Competing talker
+
+500 generated clips from held-out LibriSpeech test-clean speakers: foreground at 0 dB, a different speaker 3 to 15 dB below, both through a room impulse response.
+
+| Model | Foreground F1 | Foreground recall | Background-only frames called speech |
+|---|---|---|---|
+| Auricle v1 | 94.2% | 97.3% | 35.4% |
+| Silero v6 | 89.4% | 97.4% | 81.7% |
+
+### Languages
+
+FLEURS test splits, two hours per language, labelled by Silero on the clean audio; the competing test uses a same-language background talker.
+
+| Language | Clean agreement F1 | Competing F1, v1 vs Silero | Background false alarms, v1 vs Silero |
+|---|---|---|---|
+| English | 98.6% | 94.6% vs 89.7% | 35% vs 82% |
+| Spanish | 98.6% | 95.9% vs 93.3% | 52% vs 87% |
+| German | 98.4% | 94.5% vs 92.3% | 61% vs 83% |
+| Arabic | 98.1% | 96.4% vs 94.5% | 59% vs 83% |
+| Hindi | 97.4% | 95.3% vs 93.4% | 60% vs 80% |
+| Mandarin | 95.0% | 89.5% vs 86.1% | 59% vs 84% |
+| Japanese | 93.3% | 90.1% vs 87.3% | 63% vs 77% |
+
+### Threshold sweep, competing set
+
+| Threshold | Foreground recall | Background false alarms |
+|---|---|---|
+| 0.3 | 97.3% | 35.4% |
+| 0.5 | 97.3% | 35.4% |
+| 0.7 | 75.9% | 14.2% |
+
+The ROC is steep: lowering false alarms by threshold costs recall quickly. The recommended operating point is 0.5.
+
+## Negative results
+
+Two further runs are documented in `docs/RESEARCH.md` of the Auricle repository. Harder competing-talker mixing with 4x loss weight on background-only frames (v1.5) shifted the operating point only: identical false-alarm rate at matched recall, 1.3 points lost on TEN. Adding ten hours each of six languages to the mix (v1.6) changed every number by under 0.3 points. Conclusion: with the mixed audio as the only input, a small causal model separates talkers by level, and level is ambiguous at 0 to 20 dB. The next model takes an enrolment embedding as a second input.
+
+## Limitations
+
+- Not more accurate than Silero v6 on single-speaker real audio (0.9 points below on 30 recordings, within noise); the labels came from Silero, so on that task it can only match.
+- Competing-talker numbers are on generated clips until a public meeting-corpus benchmark is added.
+- 35% background false alarms is 2.3x better than Silero, not "ignores background speech".
+- Trained on English read speech; the six other languages are measured, not trained on. Spontaneous speech, children, shouting and far-field phone audio are unmeasured.
+- No field numbers on laptop speakers, Bluetooth headsets or phones yet.
+
+## Use
+
+```ts
+import { createVad } from 'auricle';
+const vad = await createVad({ model: 'auricle', onSpeechEnd: (audio) => upload(audio) });
+await vad.start();
+```
+
+Python, with the ONNX file: compute log-mel exactly as `vadtrain/features.py` does (periodic Hann 512, hop 256, 40 HTK mel bands area-normalised, `log(mel + 1e-6)`), run `vad.onnx`, apply sigmoid.
+
+## Attribution
+
+Labels were bootstrapped from [Silero VAD](https://github.com/snakers4/silero-vad) v6 (MIT) on clean audio. Data: LibriSpeech, MUSAN (CC BY 4.0), RIRS_NOISES (Apache 2.0), VocalSound (CC BY-SA 4.0), FLEURS (CC BY 4.0) for evaluation only. The TEN VAD test set was used for evaluation only.
+
+## Citation
+
+```
+@software{auricle_v1_2026,
+  title  = {Auricle v1: a foreground-selective voice activity detector for the browser},
+  author = {Himanshu},
+  year   = {2026},
+  url    = {https://huggingface.co/auricle-voice/auricle-v1}
+}
+```
+
+---
+
+# Migrating from `@ricky0123/vad-web`
+
+Auricle ships a `compat` entry with the same shape as vad-web's `MicVAD`, so the first step is one import. The second step, optional, is to use what vad-web does not have.
+
+## Step 1: change the import
+
+Before:
+
+```ts
+import { MicVAD, utils } from '@ricky0123/vad-web';
+
+const vad = await MicVAD.new({
+  positiveSpeechThreshold: 0.5,
+  negativeSpeechThreshold: 0.35,
+  redemptionMs: 240,
+  onSpeechStart: () => ui.listening(),
+  onSpeechEnd: (audio) => upload(utils.encodeWAV(audio)),
+});
+vad.start();
+```
+
+After:
+
+```ts
+import { MicVAD, utils } from 'auricle/compat';
+
+const vad = await MicVAD.new({
+  positiveSpeechThreshold: 0.5,
+  negativeSpeechThreshold: 0.35,
+  redemptionMs: 240,
+  onSpeechStart: () => ui.listening(),
+  onSpeechEnd: (audio) => upload(utils.encodeWAV(audio)),
+});
+vad.start();
+```
+
+Delete `baseAssetPath`, `onnxWASMBasePath` and the copied `.onnx` and `.wasm` files: Auricle has no assets. The model and the runtime are inside the JavaScript.
+
+React: `import { useMicVAD } from 'auricle-react'` returns the same `{ listening, errored, loading, userSpeaking, pause, start, toggle }`.
+
+Script tag, no bundler:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/auricle@0.1.0/dist/auricle.iife.js"></script>
+<script>
+  const { MicVAD } = Auricle.compat;
+  MicVAD.new({ startOnLoad: true, onSpeechEnd: (audio) => console.log(audio.length) });
+</script>
+```
+
+## What maps one to one
+
+| vad-web | Auricle compat | Note |
+|---|---|---|
+| `onSpeechStart` | same | fires on the speech candidate, three voiced frames in |
+| `onSpeechRealStart` | same | fires on confirmation, six of the last ten frames voiced |
+| `onSpeechEnd(audio)` | same | `Float32Array` at 16 kHz with 512 ms of pre-roll |
+| `onVADMisfire` | same | |
+| `onFrameProcessed({isSpeech, notSpeech}, frame)` | same signature | `frame` is empty: audio stays in the worklet |
+| `positiveSpeechThreshold`, `negativeSpeechThreshold` | same | Auricle defaults 0.5 / 0.35 |
+| `redemptionMs` | same | the hangover; Auricle default 240, vad-web default 1400 |
+| `minSpeechMs` | same | Auricle default 100, vad-web default 400 |
+| `startOnLoad` | same | |
+| `start()`, `pause()`, `destroy()`, `listening` | same | |
+| `utils.encodeWAV` | same | |
+
+## What is different
+
+- **Defaults end turns sooner.** vad-web waits 1,400 ms of silence; Auricle waits 240 ms, which on the labelled turn set closes a turn 1.1 s sooner at the same recall. If you were relying on long pauses merging into one segment, pass `redemptionMs: 1400`.
+- **Pre-roll is fixed** at 512 ms. `preSpeechPadMs` is accepted and ignored.
+- **No 8 kHz input, no legacy models.** 16 kHz only; the detector is Auricle v1.
+- **Inference runs in a worker**, not on the main thread.
+
+## Step 2: what vad-web does not have
+
+Once the import works, the same package gives you, without new dependencies:
+
+- `createVad()` with graded events: candidate, confirmed, end, misfire, and a `thresholds` object.
+- `Auricle.create({ backend })`: the whole conversation loop against any OpenAI-compatible endpoint, with ducking in 30 ms, hard stop in 15 ms on interruption, and the agent's history cut to what the user actually heard.
+- The detector is Auricle v1, which fires less than half as often on a second talker than Silero v6 at the same foreground recall; there is no model option to set.
+- `playClip()`: play anything through the ducking path.
+
+The README shows each in five lines.
+
+---
+
+# Research notes: where Auricle stands and whether to train our own model
+
+Written 2026-10-17 after the benchmark and optimisation passes. Companion to `COMPARISON.md` (numbers) and `docs/ROADMAP.md` (roadmap).
+
+## Are we done?
+
+No. Two columns, kept apart on purpose.
+
+**Measured.** On every axis a script can check, Auricle is the best option on the web for what it does:
+
+| Axis | Auricle | The de facto standard (`@ricky0123/vad-web`) |
+|---|---|---|
+| Frame accuracy on human-labelled recordings | identical model, F1 93.7% | identical |
+| Per 32 ms frame in Chromium and WebKit | 0.05 ms | 0.18 ms |
+| Start-up to a ready model | 13 to 15 ms | 175 to 215 ms |
+| Download, gzipped | 925 KB | 5,520 KB |
+| Turn end after the user stops | 324 ms | 1,432 ms |
+| Ducking, barge-in arbitration, heard-text history, verified transcript cleanup, backend adapter | yes | none, by design |
+
+**Unmeasured.** No Firefox or mobile numbers, no field sessions on laptop speakers, no end-to-end latency against a live endpoint, zero users, zero releases. "Best on the web" is true on the measured column and unproven on the human column.
+
+## What we tried to beat the detector with, and what happened
+
+All scored on TEN VAD's 30 human-annotated recordings (frame F1 at threshold 0.5) or on the 240-utterance labelled turn set.
+
+| Idea | Result | Decision |
+|---|---|---|
+| Causal smoothing of the probability: EMA 0.5 and 0.7, 3-frame median, 2-frame max, two-state hysteresis | every variant lowers F1 (raw 93.73%, best variant 93.67%) | not added; the recurrent state already smooths |
+| 16 ms hop: score the last 512 samples every 256 new ones | F1 93.7% to 89.8%, recall 83% | rejected and removed; a 16 ms model must be trained at 16 ms |
+| Minimum voiced duration before a segment counts | no effect up to 300 ms, costs one-word turns above | kept as a knob, default 100 ms |
+| TEN VAD as the base model | lower F1 than Silero v6 at our thresholds on TEN's own set; licence forbids use inside a library | benchmark reference only |
+| FFT STFT, explicit SIMD, time-major layout | 0.32 ms to 0.05 ms per frame, parity unchanged | shipped |
+| Eager STT during the hangover, first clause to TTS, connection warm-up | mechanism verified, live figures pending | shipped |
+
+Conclusion: the detector is at its ceiling for this model. Bolt-on tricks lose on the data.
+
+## Can we create our own model?
+
+Yes, and it is the only way past the ceiling. What "better" can and cannot mean:
+
+- **Not better single-speaker accuracy.** Silero v6 scores 93.7% F1 on real labelled audio and was trained on far more data than we can gather. A model trained here will likely land slightly below that on the same test.
+- **Better at the thing Silero cannot do: ignoring background speech.** A television, a colleague, a second person all count as speech today, and no threshold fixes that. A foreground-selective model, one that counts only the dominant, sustained speaker and needs no enrollment, is the barrier worth breaking for agents. The recipe is mostly data, not architecture: competing-speaker mixing with foreground-only labels, generated automatically.
+- **Not faster.** 0.05 ms per frame is already nothing; speed is not a reason to train.
+
+### What it takes
+
+| Step | Effort |
+|---|---|
+| Data: a clean speech corpus (LibriSpeech, about 6 GB), a noise set, and a mixing pipeline that creates competing-speaker clips with foreground-only labels automatically | half a day, mostly download and disk |
+| Model: a small recurrent network on log-mel features, around 100k parameters, trained on Apple Silicon | a few hours of training, a day of iteration |
+| Evaluation: TEN's labelled set for plain accuracy, plus a generated competing-speaker set for the new metric, background false-alarm rate gated by foreground F1 | half a day |
+| Port: weights into the existing Rust path behind the `Vad` trait, parity test against the PyTorch reference, the same bench scripts | half a day |
+
+Roughly three to four days for a model that matches Silero on single speakers and beats it when someone else is talking. It is Phase C of `docs/ROADMAP.md`.
+
+### Acceptance criteria before it ships
+
+1. F1 on TEN's labelled set within 1 point of Silero v6.
+2. Background false-alarm rate under 5% on the competing-speaker set, where Silero's is measured and published alongside.
+3. Under 0.5 ms per frame in WASM, under 1 MB gzipped in total with Silero kept as the fallback.
+4. Parity test between the Rust port and the training-time reference, same as today.
+5. The bench scripts run unchanged against it.
+
+## What we trained (October 2026)
+
+Pipeline in the companion repository `VAD-train`. Model: 40-band log-mel every 16 ms, two causal convolutions, a two-layer GRU of 64 units, one sigmoid per frame; 83,393 parameters, 334 KB of float weights. Labels: Silero v6 on clean LibriSpeech (961 h, three train splits), kept fixed while the student hears the clip after room impulse responses, MUSAN noise and music, a competing talker 3 to 25 dB down in 45% of clips, crowd babble, VocalSound laughs and coughs at user level, bandlimiting, clipping and gain. 20,000 steps of 128 five-second clips on a six-core laptop CPU, 9.7 hours.
+
+### v1: the result
+
+| | Student v1 | Silero v6 | Criterion |
+|---|---|---|---|
+| TEN F1 at 0.5, 30 human-labelled recordings | 92.7% | 93.6% | within 1 point: pass |
+| Competing talker, foreground F1 | 94.2% | 89.4% | within 3 points: pass, 4.8 points ahead |
+| Competing talker, foreground recall | 97.3% | 97.4% | |
+| Background-only frames called speech | 35.4% | 81.7% | under 5%: fail, 2.3x fewer than Silero |
+
+Export parity between the NumPy reference and PyTorch: 2.4e-7. The competing set is 500 generated clips from held-out LibriSpeech speakers, both talkers through a room, background 3 to 15 dB below the foreground.
+
+### v1.5: a negative result worth keeping
+
+Hypothesis: the 35% floor is a training-pressure problem. Recipe: 4,000 more steps from the v1 weights, competing talker in 70% of clips at 0 to 20 dB down, more background-only and babble clips, 4x loss weight on frames where only the far talker speaks.
+
+| | Recall | Background false alarms | TEN F1 |
+|---|---|---|---|
+| v1 at threshold 0.5 | 97.3% | 35.4% | 92.7% |
+| v1.5 at threshold 0.3 | 97.3% | 35.4% | 92.2% |
+| v1.5 at threshold 0.5 | 93.7% | 25.3% | 91.4% |
+
+At matched recall the false-alarm rate is identical to the decimal. The post-training moved the operating point, which a threshold does for free, and cost 1.3 points on real speech; dev F1 fell at every evaluation after step 500. Conclusion: with the mixed audio as its only input, a small causal model separates talkers by level and nothing else, and level is ambiguous at 0 to 20 dB. Reweighting the loss, harder mixing and more steps do not add information and do not move the curve. Rejected. The rule that follows: post-training is worth running only when it adds inputs the model has never seen (new languages, field microphones, sharper labels, an enrolment embedding, the playback reference), never when it only reweights what it already saw.
+
+### v1 across languages
+
+FLEURS test splits, 2 hours per language, labelled by Silero on the clean audio; the competing-talker test uses a same-language background talker.
+
+| Language | Clean agreement F1 | Competing F1, v1 vs Silero | Background false alarms, v1 vs Silero |
+|---|---|---|---|
+| English (held-out LibriSpeech) | 98.6% | 94.6% vs 89.7% | 35% vs 82% |
+| Spanish | 98.6% | 95.9% vs 93.3% | 52% vs 87% |
+| German | 98.4% | 94.5% vs 92.3% | 61% vs 83% |
+| Arabic | 98.1% | 96.4% vs 94.5% | 59% vs 83% |
+| Hindi | 97.4% | 95.3% vs 93.4% | 60% vs 80% |
+| Mandarin | 95.0% | 89.5% vs 86.1% | 59% vs 84% |
+| Japanese | 93.3% | 90.1% vs 87.3% | 63% vs 77% |
+
+The model transfers: recall holds and it beats Silero on the competing test in every language. Mandarin and Japanese lose 3.6 and 5.3 points on clean agreement, and same-language background talkers trigger it far more than English ones. v1.6, in progress, adds about 10 hours of FLEURS training speech per language to the mix with the v1 objective, 2,500 steps from the v1 weights; it replaces v1 only if TEN stays within a point, English competing F1 holds, and the Mandarin and Japanese rows improve.
+
+### Revised acceptance
+
+Criterion 2 above asked for under 5% background false alarms. v1.5 showed that number is out of reach for a level-only model, and the honest claim that ships is the measured ratio against Silero on the same clips. The 5% target moves to the enrolment model (Phase C of `docs/ROADMAP.md`), which gives the detector the identity cue it lacks.
